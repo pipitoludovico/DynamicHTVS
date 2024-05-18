@@ -1,15 +1,15 @@
 import os
 from subprocess import Popen, DEVNULL, CalledProcessError
-import htmd.ui as htmdmodule
-
-import logging
-logging.getLogger('htmd.ui').setLevel(logging.ERROR)
-
 from subprocess import run
 from multiprocessing import Pool
 from os import listdir, getcwd
-
 from DynamicHTVS_lib.LigandTools import Tleap
+
+import htmd.ui as htmdmodule
+
+import logging
+
+logging.getLogger('htmd.ui').setLevel(logging.ERROR)
 
 cwd = getcwd()
 
