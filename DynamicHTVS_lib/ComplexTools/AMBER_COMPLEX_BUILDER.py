@@ -72,8 +72,8 @@ def CreateComplex(p_original_pdb, folder) -> None:
                  "source leaprc.lipid21", "set default PBRadii mbondi3", "loadamberparams UNL.frcmod",
                  f"UNL = loadmol2 {molfile}",
                  "check UNL",
-                 "solvated = loadpdb receptor.pdb",
-                 "complex = combine{solvated UNL}",
+                 "unsolvated_rec = loadpdb receptor.pdb",
+                 "complex = combine{unsolvated_rec UNL}",
                  'setBox complex "vdw"',
                  "savepdb complex ./gbsa/complex.pdb",
                  "saveamberparm complex ./gbsa/complex.prmtop ./gbsa/complex.inpcrd",
@@ -92,9 +92,9 @@ def CreateComplex(p_original_pdb, folder) -> None:
                  "savepdb complex complex_temp.pdb",
                  "quit"]
             LocalLeap(_)
-            Popen("pdb4amber -i complex_temp.pdb -o complex.pdb", shell=True).wait()
+            # Popen("pdb4amber -i complex_temp.pdb -o complex.pdb", shell=True).wait()
             RemoveClashes()
-            Popen("pdb4amber -i complex.pdb -o complex_final.pdb", shell=True).wait()
+            Popen("pdb4amber -i complex_noClash.pdb -o complex_final.pdb", shell=True).wait()
             _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
                  "source leaprc.lipid21", "set default PBRadii mbondi3",
                  "loadamberparams UNL.frcmod",
@@ -126,12 +126,12 @@ def BuildAMBERsystems(ResultsFolders) -> None:
 def RemoveClashes():
     vmdClash = [
         "package require pbctools\n"
-        f"mol load pdb complex.pdb\n",
+        f"mol load pdb complex_temp.pdb\n",
         'set sel [atomselect top "not (same residue as protein or (resname UNL)) and within 1.3 of resname UNL"]\n',
         'set uniqueChainIDs [lsort -unique [$sel get resid]]\n',
         "if {[llength $uniqueChainIDs] == 0} {lappend uniqueChainIDs 000}\n",
         'set to_keep [atomselect top "all and not resid $uniqueChainIDs"]\n',
-        '$to_keep writepdb complex.pdb\n',
+        '$to_keep writepdb complex_noClash.pdb\n',
         'exit\n']
 
     with open('clash_remover.tcl', 'w') as clashRemover:

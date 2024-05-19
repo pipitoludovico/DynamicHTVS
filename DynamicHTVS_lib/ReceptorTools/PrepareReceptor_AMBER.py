@@ -17,9 +17,10 @@ def PrepareProtein() -> None:
                 if 'MEMB' in line:
                     tick = 32.0
         try:
+            # print("SKIPPIG HTMD PREP")
             protein = htmdmodule.Molecule('./receptor/system.pdb')
             receptor = htmdmodule.systemPrepare(protein, hydrophobic_thickness=tick, ignore_ns_errors=True,
-                                                hold_nonpeptidic_bonds=True, titration=True)
+                                                hold_nonpeptidic_bonds=True, titration=False)
             receptor.write('./receptor/system_H.pdb')
             # we need to remove hydrogens as systemPrepare adds CHARMM-like Hs atomtypes to the system...
             run('pdb4amber -i ./receptor/system_H.pdb -o ./receptor/system.pdb -y; touch ./receptor/.check',
