@@ -28,14 +28,21 @@ def wrap(using_amber=False):
         ext = 'dcd' if any(file.endswith('dcd') for file in os.listdir('./')) else ""
         if ext == "":
             return
-        trajFile = \
-            [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
+        trajFile = [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
+        if using_amber:
+            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH-', 'P2-', 'PGR', 'PGS', 'PI', 'CHL')
+        else:
+            membraneResnames = ("POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL",
+                                "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
+                                "SOPC", "DPPE", "LLPE", "SOPE", "DPPA", "LLPA", "SOPA", "DPPI", "LLPI", "LLPS",
+                                "DPPG", "DGDG", "CMH", "SITO", "STIG", "CAMP")
+        allMembRes = " ".join(membraneResnames)
 
         txt = ['package require psfgen\n', 'package require pbctools\n', 'resetpsf\n',
                f'mol new ../structure.psf type psf\n' if not using_amber else 'mol new ../complex.prmtop type parm7\n',
                f'mol addfile ../structure.pdb type pdb\n' if not using_amber else "",
                f'mol addfile {trajFile} type {ext} first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all\n',
-               f'set sel [atomselect top "protein or lipid or resname UNL"]\n',
+               f'set sel [atomselect top "protein or resname {allMembRes} or resname UNL"]\n',
                'proc align { rmolid smolid2 seltext } {\n',
                '  set ref [atomselect 0 $seltext frame 0]\n',
                '  set sel [atomselect $smolid2 $seltext]\n',
@@ -140,7 +147,8 @@ def gbsa(_amber):
     if 'gbsa.dat' not in os.listdir("./"):
         print("AMBER CHECK:", _amber)
         if _amber is False:
-            if "complex.prmtop" not in os.listdir("./") or "receptor.prmtop" not in os.listdir("./") or "ligand.prmtop" not in os.listdir("./"):
+            if "complex.prmtop" not in os.listdir("./") or "receptor.prmtop" not in os.listdir(
+                    "./") or "ligand.prmtop" not in os.listdir("./"):
                 systems = ['complex', 'receptor', 'ligand']
                 for i in systems:
                     getPRMTOP(system=i)
@@ -154,7 +162,8 @@ def gbsa(_amber):
             GBSAs = csvTodat()
             return GBSAs
         else:
-            print("GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
+            print(
+                "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
             return [1]
     else:
         with open('gbsa.dat', 'r') as gbsaFile:
