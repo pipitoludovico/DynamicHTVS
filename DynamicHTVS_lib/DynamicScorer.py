@@ -30,7 +30,7 @@ def wrap(using_amber=False):
             return
         trajFile = [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
-            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH-', 'P2-', 'PGR', 'PGS', 'PI', 'CHL')
+            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
             membraneResnames = ("POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL",
                                 "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
