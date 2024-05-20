@@ -74,7 +74,6 @@ def CreateComplex(p_original_pdb, folder) -> None:
                  "check UNL",
                  "unsolvated_rec = loadpdb receptor.pdb",
                  "complex = combine{unsolvated_rec UNL}",
-                 'setBox complex "vdw"',
                  "savepdb complex ./gbsa/complex.pdb",
                  "saveamberparm complex ./gbsa/complex.prmtop ./gbsa/complex.inpcrd",
                  "quit"]
