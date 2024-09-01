@@ -9,14 +9,14 @@ cwd = os.getcwd()
 
 def GetGPUlist(exclude) -> list:
     """Calls GPUtil to evaluate the avaiable GPUs on the machine"""
-    GPUlist = []
     GPUs = GPUtil.getGPUs()
-    for idx, gpu in enumerate(GPUs):
-        GPUlist.append(gpu.id)
-    if exclude:
-        for excludedGPUid in exclude:
-            GPUlist.remove(excludedGPUid)
-    return GPUlist
+    gpu_ids = []
+
+    for availableGPU in GPUs:
+        gpu_ids.append(availableGPU.id)
+    if len(gpu_ids) != 0:
+        print("Available GPUS: ", gpu_ids)
+    return gpu_ids
 
 
 def CheckFailed(amber) -> None:
@@ -42,7 +42,7 @@ def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membran
     if os.path.isdir(_fol + '/system/'):
         membraneL = f"-membraneRestraints {membraneList}" if membraneList else ""
         os.chdir(_fol + "/system")
-        exclusion = "-e " + " ".join(excluded) + " " if excluded else ""
+        exclusion = "-e " + " ".join(*excluded) + " " if excluded else ""
         if os.path.exists('all.pdb'):
             Popen("rm all.*;rm ligand*;rm solvated*;", shell=True)
         if amber:

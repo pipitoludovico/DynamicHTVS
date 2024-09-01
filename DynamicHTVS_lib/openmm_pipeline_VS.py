@@ -9,6 +9,13 @@ from openmm import *
 
 import argparse
 import subprocess
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+file_handler = logging.FileHandler('featurizer.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(file_handler)
 
 try:
     import GPUtil
@@ -26,17 +33,12 @@ def getpid():
 def getGPUids(_excluded):
     GPUs = GPUtil.getGPUs()
     gpu_ids = []
+
     for availableGPU in GPUs:
         gpu_ids.append(availableGPU.id)
-    if _excluded:
-        for excluded_GPU in _excluded:
-            gpu_ids.remove(int(excluded_GPU))
     if len(gpu_ids) != 0:
         print("Available GPUS: ", gpu_ids)
-        return gpu_ids
-    else:
-        print("Please leave at least one GPU to run mwSuMD and run again.")
-        exit()
+    return gpu_ids
 
 
 def createBatches(b_replicas, b_total_gpu_ids):
@@ -51,7 +53,9 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     coords, top, charmm, params, amber, gromacs, ligand, proteinCA, membranePOPC, membranePOPE = None, None, None, None, None, None, None, None, None, None
     m_integrator = mm.LangevinMiddleIntegrator(310 * kelvin, 1 / picosecond, 0.002 * picoseconds)
     platform = mm.Platform.getPlatformByName('CUDA')
-    properties = {'DeviceIndex': f'{str(e_availableIDs)}', 'Precision': 'mixed'}
+    # properties = {'DeviceIndex': f'{str(e_availableIDs)}', 'Precision': 'mixed'}
+    logging.debug(f"Building Properties...")
+    properties = {'DeviceIndex': '0', 'Precision': 'mixed'}
     print('Running thermalization for ', e_protSteps)
     print('Running NPT equilibration for  ', e_eqSteps)
     print("Saving every ", eq_SaveF, " steps.\n")
@@ -95,10 +99,13 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     else:
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer,
                                   constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
+    logging.debug(f"Building System...")
 
     simulation_eq = Simulation(top.topology, system, m_integrator, platform, properties)
 
     simulation_eq.context.setPositions(coords.positions)
+    logging.debug(f"Context is Set...")
+
     e_totalSteps = int(e_protSteps + e_eqSteps)
 
     print("\nCreating the MonteCarlo Barostat...")
@@ -132,15 +139,18 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     if protRestraints_:
         for protSel in protRestraints_:
             if protSel.split(",")[0] == 'is':
-                proteinRes += [p.index for p in top.topology.atoms() if (p.name == protSel.split(",")[1] and p.residue.name in protResname)]
+                proteinRes += [p.index for p in top.topology.atoms() if
+                               (p.name == protSel.split(",")[1] and p.residue.name in protResname)]
             else:
                 proteinRes += [p.index for p in top.topology.atoms() if
                                (p.name != protSel.split(",")[1] and p.residue.name in protResname)]
     membraneRes = []
     if membRestraints_:
         for membSel in membRestraints_:
+            print('Adding restraints to:', membSel.split(',')[0], "name", membSel.split(",")[1])
             membraneRes += [p.index for p in top.topology.atoms() if
                             (p.residue.name == membSel.split(",")[0] and p.name == membSel.split(",")[1])]
+            print("membraneres", membraneRes)
     ligandRes = []
     if charmm and e_userPar is not None:
         print("CHARMM ligand Found. Adding restraints")
@@ -161,21 +171,24 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
                                  component is not None for atomIndex in component]))
     if proteinRes:
         print("Adding restraints to the protein")
-    if membRestraints_:
-        print("Adding restraints to the selected membrane residues/atoms")
-    if ligand:
+    if membraneRes:
+        print("Adding restraints to the selected membrane residues/atoms", membraneRes)
+    if ligandRes:
         print("Adding restraints to the ligand")
     print("Number of restrained atoms:\n", len(restraintIndexes))
     ApplyRestraints(simulation_eq, restraintIndexes)
+    logging.debug(f"Restraints Added...")
 
     simulation_eq.reporters.append(
         app.StateDataReporter('equilibration.std', 1000, step=True, totalSteps=e_totalSteps, remainingTime=True,
                               potentialEnergy=True, temperature=True))
     simulation_eq.reporters.append(app.DCDReporter('equilibration.dcd', eq_SaveF, enforcePeriodicBox=True))
+    logging.debug(f"Reporters Created...")
 
     print('\nMinimizing local energy...')
     simulation_eq.minimizeEnergy(tolerance=0.1 * kilojoule / mole)
     print('\nWarming up the complex with the restraints...')
+    logging.debug(f"Energy Minimized...")
 
     T = 5
     mdstepsT = 6200
@@ -184,11 +197,14 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
         m_integrator.setTemperature(temperature)
         simulation_eq.context.setVelocitiesToTemperature(temperature)
         simulation_eq.step(int(mdstepsT / 62))
+    logging.debug(f"Protocol Finished...")
 
     print('\nEquilibrating with restraints and temperature...')
     easing = int(e_protSteps * 0.2)
     prot = int(e_protSteps - easing)
     simulation_eq.step(prot)
+    logging.debug(f"Restrained EQUILIBRATION Finished...")
+
     print(f'\n{easing} steps easing "k" restraint...:')
     count = 0
     while count < easing:
@@ -197,19 +213,27 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
             simulation_eq.context.setParameter('k', r_i * kilocalories_per_mole / nanometer ** 2)
             simulation_eq.step(1000)
             count += 1000
+            logging.debug(f"Easing restraints with k= {r_i}")
+    logging.debug(f"\nEasing restrained EQUILIBRATION FINISHED")
     print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ',
           e_eqSteps)
     simulation_eq.context.setParameter('k', 0)
+    logging.debug(f"\nContext SET")
+
     simulation_eq.reporters.append(app.CheckpointReporter('equilibration_checkpnt.chk', e_eqSteps))
     # simulation.reporters.append(app.DCDReporter('NPT_K0.dcd', 1000, enforcePeriodicBox=True))
     simulation_eq.step(e_eqSteps)
+    logging.debug(f"\nNPT EQUILIBRATION FINISHED")
+
     # saving the final coordinates
     positions = simulation_eq.context.getState(getPositions=True, enforcePeriodicBox=True).getPositions()
     app.PDBFile.writeFile(simulation_eq.topology, positions, open("last_frame.pdb", 'w'))
     # saving final state
     final_state = simulation_eq.context.getState(getPositions=True, getVelocities=True)
+
     with open('equilibration_checkpnt.xml', 'w') as output:
         output.write(XmlSerializer.serialize(final_state))
+    logging.debug(f"\nFINAL STATE SAVED")
     simulation_eq.reporters.clear()
 
 
@@ -220,7 +244,7 @@ def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_repl
     platform = mm.Platform.getPlatformByName('CUDA')
     properties = {'DeviceIndex': f'{str(p_GPU)}', 'Precision': 'mixed'}
     integrator = mm.LangevinIntegrator(310 * kelvin, 1 / picosecond, m_timeStep * picoseconds)
-
+    logging.debug(f"\nPLATFORM INITIALIZED")
     if p_topology.endswith(".top") and eq_coordinates.endswith('.gro'):  # to be tested with gromacs
         gromacs = True
         p_coords = GromacsGroFile(eq_coordinates)
@@ -247,6 +271,7 @@ def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_repl
         else:
             paramPATHS = defaultParams
         params = app.CharmmParameterSet(*paramPATHS)
+    logging.debug(f"\nPRODUCTION PARAMETERS LOADED")
 
     if gromacs:
         p_top = GromacsTopFile(p_topology, periodicBoxVectors=p_coords.getPeriodicBoxVectors(),
@@ -259,20 +284,28 @@ def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_repl
         system = p_top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer,
                                     switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True,
                                     hydrogenMass=4 * amu)
+    logging.debug(f"\nSystem BUILT")
 
     simulation_production = Simulation(p_top.topology, system, integrator, platform, properties)
     simulation_production.loadState("equilibration_checkpnt.xml")
+    logging.debug(f"\nPREVIOUS STATE SUCCESSFULLY LOADED")
 
     simulation_production.reporters.append(
         DCDReporter(f"run_{p_replicas}/Traj_{p_replicas}.dcd", p_saveF, enforcePeriodicBox=True))
     simulation_production.reporters.append(
         StateDataReporter(f'run_{p_replicas}/Traj_{p_replicas}.std', 1000, step=True, totalSteps=m_number_of_steps,
                           remainingTime=True, potentialEnergy=True, temperature=True))
+    logging.debug(f"\nPRODUCTION REPORTERS LOADED")
+
     simulation_production.step(m_number_of_steps)
+    logging.debug(f"\nPRODUCTION SIMULATION FINISHED")
 
     final_state = simulation_production.context.getState(getPositions=True, getVelocities=True, enforcePeriodicBox=True)
+    logging.debug(f"\nFINAL STATE CAPTURED.")
+
     with open(f'run_{p_replicas}/Traj_{p_replicas}.xml', 'w') as output:
         output.write(XmlSerializer.serialize(final_state))
+    logging.debug(f"\nFINAL STATE XML SAVED")
     simulation_production.reporters.clear()
 
 
@@ -380,7 +413,7 @@ ap.add_argument('-membraneRestraints', '--membraneRestraints', nargs='*', requir
                 help='defines the RESNAME and the atom of the membrane you want to restrain. '
                      '\nThe synthats is comma-separated. "POPE,P" or "POPE,P,POPC,P,POPE,N" for multiple selections. [Default = None]')
 ap.add_argument('-ligresname', '--ligresname', type=str, action='append', default=["UNL", "UNK"], required=False,
-                help=' set -ligresname UNK to identify your small molecule resname [Default = UNL]')
+                help=' set -ligresname UNK to identify your small molecule resname [Default = UNL, UNK]')
 
 ap.add_argument('-in', '--integrator', type=float, required=False, help=' use -in to set the timestep in fs')
 ap.add_argument("-k", '--kill', required=False, action='store_true', default=False, help="kill the current process")

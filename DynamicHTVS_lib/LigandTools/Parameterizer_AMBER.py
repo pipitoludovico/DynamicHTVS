@@ -30,14 +30,13 @@ def ParameterizeLigands(p_original_pdb, folder) -> None:
             os.chdir(cwd)
             return
         try:
-            run(f"antechamber -i {newLigPDBName} -fi pdb -o {newLigMOL2Name} -fo mol2 -s 0 -c bcc -nc {formal_charge} -rn UNL -at gaff2 -pl -1",
-                shell=True)
-            run(f"parmchk2 -i {newLigMOL2Name} -f mol2 -o UNL.frcmod -s gaff2", shell=True)
+            with open('antechamber.out', 'w') as anteOut, open('antechamber.err', 'w') as anteErr:
+                run(f"antechamber -i {newLigPDBName} -fi pdb -o {newLigMOL2Name} -fo mol2 -s 0 -c bcc -nc {formal_charge} -rn UNL -at gaff2 -pl -1",
+                    shell=True, stdout=anteOut, stderr=anteErr)
+                run(f"parmchk2 -i {newLigMOL2Name} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
         except CalledProcessError:
             print("X" * 200)
             print("antechamber failed with: ", newLigPDBName)
-        from DynamicHTVS_lib.LigandTools.Tleap import RunTleap
-        RunTleap(newLigMOL2Name, solvate=False, conc=None)
     os.chdir(cwd)
 
 

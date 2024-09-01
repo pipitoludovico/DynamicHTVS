@@ -177,7 +177,6 @@ class DatabaseDocker:
             if mol is not None:
                 name = str(row[p_idColName])
                 os.makedirs("./Docking_folder/" + name, exist_ok=True)
-                _ = open(f'Docking_folder/{row[p_idColName]}/{row[p_idColName]}.pdb', 'w')
                 mol = Chem.AddHs(mol)
                 AllChem.EmbedMolecule(mol, randomSeed=42)
                 path = f"Docking_folder/{row[p_idColName]}/{row[p_idColName]}.pdb"

@@ -5,7 +5,7 @@ import MDAnalysis.analysis.rms
 import statistics
 from pathlib import Path
 from multiprocessing import Pool
-from subprocess import Popen, DEVNULL
+from subprocess import Popen
 import warnings
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,9 +28,11 @@ def wrap(using_amber=False):
         ext = 'dcd' if any(file.endswith('dcd') for file in os.listdir('./')) else ""
         if ext == "":
             return
-        trajFile = [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
+        trajFile = \
+            [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
-            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
+            membraneResnames = (
+                'PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
             membraneResnames = ("POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL",
                                 "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
@@ -51,10 +53,11 @@ def wrap(using_amber=False):
                '  for { set i 1 } { $i < $n } { incr i } {\n',
                '    $sel frame $i\n', '    $all frame $i\n',
                '    $all move [measure fit $sel $ref]\n', '  }\n', '  return\n', '}\n',
-               'puts "Unwrapping all"\n '
+               'puts "Unwrapping all"\n'
                'pbc unwrap -all\n'
-               'puts "Aligning on frame 0"\n '
+               'puts "Aligning on frame 0"\n'
                f'align 0 0 "protein and name CA"\n',
+               'pbc set {0 0 0} -all\n',
                'animate write dcd ../../gbsa/complex.dcd beg 0 end -1 waitfor all sel $sel\n',
                'quit\n']
         with open("filterTrj.vmd", "w") as vmdscr:
@@ -115,8 +118,7 @@ def getPRMTOP(system=None):
 def write_pbsa_in():
     mmgbsain = open('mmgbsa.in', "w")
     txt = ('&general\n' '\tkeep_files=0, start=1, interval=10\n' '/\n'
-           '&gb\n''\tigb=8, saltcon=0.150,\n''/\n'
-           '&decomp\n''\tidecomp=1, dec_verbose=1, print_res="all"\n''/\n')
+           '&gb\n''\tigb=8, saltcon=0.150,\n''/\n')
     mmgbsain.write(txt)
     mmgbsain.close()
 
@@ -137,7 +139,7 @@ def csvTodat() -> list:
                                 datFile.write(deltaLine.split(',')[-1].strip() + "\n")
         datFile.close()
         return data
-    except:
+    except FileNotFoundError:
         print("No gbsa.csv found. Check if your GBSA analysis went well.")
 
 
@@ -154,9 +156,9 @@ def gbsa(_amber):
                     getPRMTOP(system=i)
         write_pbsa_in()
         amberPATH = "$AMBERHOME/bin/MMPBSA.py"
-        Popen(
-            f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv -deo gbsa_decomp.csv',
-            shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+        command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
+        with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
+            Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
 
         if 'gbsa.csv' in os.listdir('./'):
             GBSAs = csvTodat()
@@ -164,7 +166,7 @@ def gbsa(_amber):
         else:
             print(
                 "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
-            return [1]
+            return [1, 1, 1, 1, 1]
     else:
         with open('gbsa.dat', 'r') as gbsaFile:
             for gbsaline in gbsaFile:
@@ -174,11 +176,9 @@ def gbsa(_amber):
 
 def score(RMSDsFull, GBSAsFull):
     if len(RMSDsFull) > 1 and len(GBSAsFull) > 1:
-        print("Computing the score for: ", os.getcwd(), RMSDsFull, GBSAsFull)
         RMSDs = RMSDsFull[1:]
         GBSAs = GBSAsFull[1:]
         scores = [i / j for i, j in zip(GBSAs, RMSDs)]
-        print("SCORES: ", scores)
         nframes = len(scores)
 
         scoreSUM = round(sum(scores), 3)
@@ -245,7 +245,7 @@ def main(m_amber):
                     gbsa_process = p.apply_async(GBSAcalculatorWrapper, (zincFolder, mothFolder, amber,))
                     processes.append(gbsa_process)
         for pro in processes:
-            pro.get(timeout=3600)
+            pro.get(timeout=36000)
     p.close()
     p.join()
 

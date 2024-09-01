@@ -5,8 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/DynamicHTVS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/DynamicHTVS.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/DynamicScorer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ParameterizeResultsForAMBER.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_AMBER.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/openmm_pipeline_VS.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/openmm_pipeline_VS.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,7 +47,9 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="2gdJsnaUIjB7UQr9U1xUHhLv70l" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -84,7 +94,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-babbdf50b680-746f403e7f0c-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-241.15989.155" />
+        <option value="bundled-python-sdk-ce3d9afa04ac-ba05f1cad1b1-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.20224.347" />
       </set>
     </attachedChunks>
   </component>
@@ -98,5 +108,15 @@
       <updated>1716021730219</updated>
     </task>
     <servers />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+      </list>
+    </option>
   </component>
 </project>

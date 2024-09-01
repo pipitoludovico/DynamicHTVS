@@ -3,9 +3,6 @@ from subprocess import run, CalledProcessError, DEVNULL
 
 
 def RunTleap(structureFile, solvate, ionize=None, conc=1, MOL2=None) -> None:
-    makedirs('system', exist_ok=True)
-    makedirs('gbsa', exist_ok=True)
-
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
          "source leaprc.lipid21",
          "set default PBRadii mbondi3",
