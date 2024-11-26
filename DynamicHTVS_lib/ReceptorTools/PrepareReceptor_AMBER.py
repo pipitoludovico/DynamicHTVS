@@ -1,41 +1,34 @@
-import os.path
+import os
+from os import path, listdir, makedirs
 
 from subprocess import run, DEVNULL
 
 
 def PrepareProtein() -> None:
-    """Prepares the system for AMBER using htmd."""
-    if not os.path.exists('./receptor/.check'):
-        run("sed -i 's/HSP/HIS/g' ./receptor/system.pdb", shell=True)
-        run("sed -i 's/HSD/HIS/g' ./receptor/system.pdb", shell=True)
-        run("sed -i 's/HSE/HIS/g' ./receptor/system.pdb", shell=True)
-        import htmd.ui as htmdmodule
-        print("Building the receptor from MD...\n\n")
-        tick = None
-        with open("./receptor/system.pdb", 'r') as originalREC:
-            for line in originalREC:
-                membraneResnames = (
-                    'PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI',
-                    'CHL')
-                if any(memb in line for memb in membraneResnames):
-                    tick = 32.0
-        try:
-            protein = htmdmodule.Molecule('./receptor/system.pdb')
-            receptor = htmdmodule.systemPrepare(protein, hydrophobic_thickness=tick, ignore_ns_errors=True,
-                                                hold_nonpeptidic_bonds=True, titration=False)
-            receptor.write('./receptor/system_H.pdb')
-            run('pdb4amber -i ./receptor/system_H.pdb -o ./receptor/system.pdb; touch ./receptor/.check', shell=True, stdout=DEVNULL)
-            del protein, receptor  # clearing memory as we don't need those anymore
-        except Exception as e:
-            print("Building the system raised this exception:", e)
-            print("\nTrying pdb4amber first.\n")
-            run('pdb4amber -i ./receptor/system.pdb -o ./receptor/receptor_amber.pdb -y -a', shell=True, stdout=DEVNULL)
-            protein = htmdmodule.Molecule('./receptor/receptor_amber.pdb')
-            receptor = htmdmodule.systemPrepare(protein, hydrophobic_thickness=tick, ignore_ns_errors=True,
-                                                hold_nonpeptidic_bonds=True, titration=True)
-            receptor.write('./receptor/receptor_H.pdb')
-            run('pdb4amber -i ./receptor/receptor_H.pdb -o ./receptor/system.pdb; touch ./receptor/.check',
-                shell=True)
+    """Prepares the system for AMBER using pdb2pqr."""
+    makedirs('./receptor/backups', exist_ok=True)
+    pdbFilelist: list = []
+    if not path.exists('./receptor/.check'):
+        if any(file.endswith('psf') for file in os.listdir('./receptor')):
+            print("Found a CHARMM psf files while -amber keyword is on. Attempting to convert them to AMBER.")
+
+            for file in listdir('./receptor'):
+                if file.endswith('pdb'):
+                    run(f"cp ./receptor/{file} ./receptor/backups/{file}", shell=True)
+                    run(f"sed -i 's/HSP/HIS/g' ./receptor/{file}", shell=True)
+                    run(f"sed -i 's/HSD/HIS/g' ./receptor/{file}", shell=True)
+                    run(f"sed -i 's/HSE/HIS/g' ./receptor/{file}", shell=True)
+                    run(f"sed -i 's/HIP/HIS/g' ./receptor/{file}", shell=True)
+                    pdbFilelist.append(f"./receptor/{file}")
+        for file in pdbFilelist:
+            try:
+                with open('./logs/pdb4amberlog.log', 'a') as pdb4amberlogger:
+                    run(f'pdb4amber -i {file} -o ./receptor/tmp.pdb -a;', shell=True, stdout=DEVNULL, stderr=pdb4amberlogger)
+                    run('pdb2pqr ./receptor/tmp.pdb ./receptor/tmp.pqr --ff AMBER --ffout AMBER --titration-state-method propka', shell=True, stdout=DEVNULL, stderr=pdb4amberlogger)
+                    run(f'cpptraj  -p ./receptor/tmp.pqr -y ./receptor/tmp.pqr -x ./receptor/tmp.pdb;mv ./receptor/tmp.pdb {file}', shell=True, stdout=DEVNULL, stderr=pdb4amberlogger)
+                    print(f"\nConversion of {file} complete. Check your system before proceding.")
+            except Exception as e:
+                print(e)
+        run("touch ./receptor/.check", shell=True)
     else:
-        print(
-            "Found hidden .check file from a previous pdb4amber run. Remove this file if you want to run pdb4amber again")
+        print("Found hidden .check file from a previous pdb4amber run. Remove this file if you want to run pdb4amber again")

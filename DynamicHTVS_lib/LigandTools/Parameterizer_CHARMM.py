@@ -1,10 +1,11 @@
-import os
+from os import listdir, getcwd, path, system, chdir, makedirs
 from multiprocessing import Pool
 from subprocess import DEVNULL, PIPE
 from subprocess import run, CalledProcessError
+
 from rdkit import Chem
 
-cwd = os.getcwd()
+cwd = getcwd()
 
 
 def SplitStreamFile() -> (str, str):
@@ -67,12 +68,12 @@ def CalculateRESP2top(pdbForResp_file) -> None:
     c_topName, c_parName = SplitStreamFile()  # top.top par.par
     gaussian_output = "gau_input.log"
     # running antechamber with the gaussian output to generate the RESP.mol2 file with right charges
-    if not os.path.exists("RESP.mol2"):
-        os.system(
-            f'/home/scratch/software/amber20/bin/antechamber -i {gaussian_output} -fi gout -o RESP.mol2 -fo mol2 -c resp -eq 2 -s 2 -pf y  -rn UNL')
-    if os.path.exists("QOUT"):
-        os.system('rm esout punch qout QOUT')  # removing a bit of clutter
-    if os.path.exists("RESP.mol2"):
+    if not path.exists("RESP.mol2"):
+        system(
+            f'/home/scratch/software/amber20/bin/antechamber -i {gaussian_output} -fi gout -o RESP.mol2 -fo mol2 -c resp -eq 2 -s 2 -pf y  -rn UNL > antechamberlog 2>&1')
+    if path.exists("QOUT"):
+        system('rm esout punch qout QOUT')  # removing a bit of clutter
+    if path.exists("RESP.mol2"):
         atomNames_charge = []
         with open('RESP.mol2', 'r') as f:
             for line in f:
@@ -137,66 +138,80 @@ def WriteGaussian(pdbFile, charge) -> None:
     output.close()
 
 
-def RunSilcBio(mol2, strFile):
+def RunSilcBio(mol2, strFile) -> bool:
     try:
-        result = run(
-            f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  {mol2} > {strFile}",
-            shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
+        result = run(f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  {mol2} > {strFile}", shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
         if "skipped" in result.stderr:
-            result_second_attempt = run(
-                f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  --bond-order {mol2} > {strFile}",
-                shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
+            result_second_attempt = run(f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  --bond-order {mol2} > {strFile}", shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
             if "skipped" in result_second_attempt.stderr:
                 print("Silcsbio failed.")
-                return  # no initial str = exit the function
-        with open(strFile, 'r') as silcBioOutput:
-            if not any(line.startswith('ATOM') for line in silcBioOutput.readlines()):
-                raise IOError
+                return False
+        else:
+            return True
     except FileNotFoundError:
         print("Stream file cration failed with SilcBio.")
-        return
+        return False
+
+
+def RenumbererWrapper(initialPDBinPostDockPoses, folder)->None:
+    chdir(folder)
+    pdb_rename(initialPDBinPostDockPoses)  # renum_whatever.pdb
+    chdir(cwd)
 
 
 def Parameterize(initialPDBinPOSTdocks, folder) -> None:
-    os.chdir(folder)
+    chdir(folder)
     molID = str(folder).split("/")[1]
-    os.makedirs('system', exist_ok=True)
-    os.makedirs('gbsa', exist_ok=True)
+    makedirs('system', exist_ok=True)
+    makedirs('gbsa', exist_ok=True)
     renamed_file = pdb_rename(initialPDBinPOSTdocks)  # renum_whatever.pdb
     mol2 = molID + ".mol2"  # zinc23030032.mol2
     strFile = "strfile.str"
+    check = True
     # building the initial .mol2 file
-    if not os.path.exists(mol2):
+    if not path.exists(mol2):
         run(f'obabel -i pdb {renamed_file} -o mol2 -O {mol2}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
     # using the mol2 file to generate a rough .str file
-    if not os.path.exists(strFile):
-        RunSilcBio(mol2, strFile)
-    else:
-        with open(strFile, 'r') as silcBioOutput:
-            if not any(line.startswith('ATOM') for line in silcBioOutput.readlines()):
-                RunSilcBio(mol2, strFile)
-
-    # /scratch/ludovico9/galectin/benchmark/post_Docks/ZINC001167858678
-    mol_for_charge = Chem.MolFromPDBFile(f"../../Docking_folder/{molID}/{molID}.pdb")
-    charge = Chem.GetFormalCharge(mol_for_charge)
-    if not os.path.exists('gau_input.gau'):
-        WriteGaussian(initialPDBinPOSTdocks, charge)  # gau_input.gau, gau_chk.chk
-    if not os.path.exists('gau_input.log'):  # if gaussian was not completed
+    if any(not path.exists(topFile) for topFile in ('strfile.str', 'new_file_char.top')):
+        # we make a check exit code bool because silcbio does not return an exit status of 0...
+        check = RunSilcBio(mol2, strFile)
+    if not check:
+        chdir(cwd)
+        return
+    if not all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
+        try:
+            run(f'obabel -i pdb {initialPDBinPOSTdocks} -o mol2 -O {mol2}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
+            mol_for_charge = Chem.MolFromMol2File(f"{mol2}")
+            charge = Chem.GetFormalCharge(mol_for_charge)
+        except Exception as e:
+            print("Molecule ", molID, " failed. Turnin off sanitization. Check the results are they might be wrong or unphysical!")
+            print(repr(e))
+            mol_for_charge = Chem.MolFromPDBFile(f"{initialPDBinPOSTdocks}.pdb", sanitize=False)
+            charge = Chem.GetFormalCharge(mol_for_charge)
+        if not path.exists('gau_input.gau'):
+            WriteGaussian(initialPDBinPOSTdocks, charge)  # gau_input.gau, gau_chk.chk
+    if not path.exists('gau_input.log'):  # if gaussian was not completed
         try:
             run(f'g09 gau_input.gau', shell=True, check=True)
-            with open('gau_input.log', 'r') as gauResults:
-                for line in gauResults.readlines()[-1:]:
-                    if len(line.split()) > 2:
-                        if "Normal termination of Gaussian" in line:
-                            CalculateRESP2top(initialPDBinPOSTdocks)
-                            BuildLJ()
-                            CreateLigandPsf()
-                        else:
-                            raise Exception('Parameterization with SilcBio and AnteChamber failed.')
         except CalledProcessError as e:
             print("Gaussian09 failed with error status:", e, " running antechamber.")
+            chdir(cwd)
             return
-    os.chdir(cwd)
+    if not all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top", 'system/ligand.psf')):
+        with open('gau_input.log', 'r') as gauResults:
+            for line in gauResults.readlines()[-1:]:
+                if len(line.split()) > 2:
+                    if "Normal termination of Gaussian" in line:
+                        CalculateRESP2top(initialPDBinPOSTdocks)
+                        BuildLJ()
+                        CreateLigandPsf()
+                    else:
+                        raise Exception('Parameterization with SilcBio and AnteChamber failed.')
+    if all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
+        for x in listdir("../"):
+            if x != getcwd():
+                run(f"cp -r *.top *.par ../{x}", shell=True)
+    chdir(cwd)
 
 
 def BuildLJ() -> None:
@@ -230,12 +245,11 @@ def BuildLJ() -> None:
         output_open.write('\nEND\n')
         output_open.close()
     except Exception as e:
-        print("Couldn't build LJ parameters for ligand in ", os.getcwd())
-        print("\nError: ", e, "\n\n")
+        print("Couldn't build LJ parameters for ligand in ", getcwd(), e)
 
 
 def CreateLigandPsf() -> (str, str):
-    ex_pdb = [file for file in os.listdir("./") if file.startswith('renum') and file.endswith('.pdb')]
+    ex_pdb = [file for file in listdir("./") if file.startswith('renum') and file.endswith('.pdb')]
     renamedPDBinput = str(ex_pdb[0])
     vmdLigand = ['package require psfgen\n', '\n',
                  'topology /home/scratch/MD_utilities/toppar_c36_jul20/top_all36_cgenff.rtf\n',
@@ -252,20 +266,30 @@ def CreateLigandPsf() -> (str, str):
     with open('ligand_psf_maker.tcl', 'w') as ligandMaker:
         for line in vmdLigand:
             ligandMaker.write(line)
-    os.system('vmd -dispdev text -e ligand_psf_maker.tcl 2>&1 > /dev/null')
-    if not os.path.exists("./system/ligand.psf") and not os.path.exists("./gbsa/ligand.psf"):
+    system('vmd -dispdev text -e ligand_psf_maker.tcl 2>&1 > /dev/null')
+    if not path.exists("./system/ligand.psf") and not path.exists("./gbsa/ligand.psf"):
         print("\n********** Ligand ", renamedPDBinput, "failed. Skipping molecule. **********\n")
 
 
-def RunParameterize_CHARMM(ResultsFolders) -> None:
+def RunParameterize_CHARMM(ResultsFolders: list) -> None:
     if len(ResultsFolders) != 0:
         with Pool(processes=4) as p:
             processes = []
-            for foldersLeft in ResultsFolders:
-                for file in os.listdir(foldersLeft):
-                    if file.endswith('.pdb') and not file.startswith('renum'):
-                        processes.append(p.apply_async(Parameterize, (file, foldersLeft)))
+            for mainLigandFolder in ResultsFolders:
+                for poseFolder in sorted(listdir(mainLigandFolder)):
+                    subfolder = f"{mainLigandFolder}/{poseFolder}"
+                    for file in listdir(subfolder):
+                        if file.endswith('.pdb') and not file.startswith('renum'):
+                            processes.append(p.apply_async(RenumbererWrapper, (file, subfolder)))
             for proc in processes:
                 proc.get()
-        p.close()
-        p.join()
+
+            processes = []
+            for mainLigandFolder in ResultsFolders:
+                for poseFolder in sorted(listdir(mainLigandFolder)[0]):
+                    subfolder = f"{mainLigandFolder}/{poseFolder}"
+                    for file in listdir(subfolder):
+                        if file.endswith('.pdb') and not file.startswith('renum'):
+                            processes.append(p.apply_async(Parameterize, (file, subfolder)))
+            for proc in processes:
+                proc.get()

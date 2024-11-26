@@ -14,24 +14,19 @@ class DockingRanker:
         os.chdir("./Docking_folder/" + r_dock_folder)
         os.makedirs('analysis', exist_ok=True)
         try:
-            docking_result = \
-                [file_in_dockFolder for file_in_dockFolder in os.listdir('./') if "_out.pdbqt" in file_in_dockFolder][0]
-            Popen(
-                f"obabel -i pdbqt {docking_result} -o pdb -O analysis/{docking_result.replace('.pdbqt', '')}_pose.pdb -m",
-                shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
+            docking_result = [file_in_dockFolder for file_in_dockFolder in os.listdir('./') if "_out.pdbqt" in file_in_dockFolder][0]
+            Popen(f"obabel -i pdbqt {docking_result} -o pdb -O analysis/{docking_result.replace('.pdbqt', '')}_pose.pdb -m", shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
             with open(docking_result, 'r') as docking_result_out:
                 modelCount = 1
                 for line in docking_result_out.readlines():
                     if "RESULT:" in line:
-                        resultSummary = open(f'analysis/{docking_result.replace("_out.pdbqt", f"_{modelCount}.txt")}',
-                                             'w')
-                        resultSummary.write(
-                            self.ROOT + "/Docking_folder/" + str(r_dock_folder) + "/analysis/" + docking_result.replace(
-                                '.pdbqt', '_pose') + str(modelCount) + f"\t {line.split()[3]}\t")
+                        resultSummary = open(f'analysis/{docking_result.replace("_out.pdbqt", f"_{modelCount}.txt")}', 'w')
+                        resultSummary.write(self.ROOT + "/Docking_folder/" + str(r_dock_folder) + "/analysis/" + docking_result.replace('.pdbqt', '_pose') + str(modelCount) + f"\t {line.split()[3]}\t")
                         modelCount += 1
                         resultSummary.close()
-        except:
-            print("Docking ligand ", r_dock_folder, "failed. Removing the folder.")
+        except Exception as e:
+            print(e)
+            print("\nDocking ligand ", r_dock_folder, "failed. Removing the folder.")
             os.chdir(self.ROOT)
             Popen(f'rm -r ./Docking_folder/{r_dock_folder}', shell=True, stdout=DEVNULL).wait()
         os.chdir(self.ROOT)
@@ -97,9 +92,7 @@ class DockingRanker:
             Popen("rm Summary_chart.txt", shell=True)
         Popen("touch Summary_chart.txt", shell=True)
         for cs_DockFoler in os.listdir("./Docking_folder"):
-            Popen(
-                f"cat {self.ROOT}/Docking_folder/{cs_DockFoler}/analysis/{cs_DockFoler}_summary.con >> Summary_chart.txt",
-                shell=True).wait()
+            Popen(f"cat {self.ROOT}/Docking_folder/{cs_DockFoler}/analysis/{cs_DockFoler}_summary.con >> Summary_chart.txt", shell=True).wait()
 
     def SortSummary(self, consider) -> None:
         for s_file in os.listdir(self.ROOT):

@@ -1,6 +1,6 @@
 import signal
 import numpy as np
-
+import warnings
 import openmm as mm
 import openmm.app as app
 from openmm.app import *
@@ -9,13 +9,8 @@ from openmm import *
 
 import argparse
 import subprocess
-import logging
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-file_handler = logging.FileHandler('featurizer.log')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logging.getLogger().addHandler(file_handler)
+warnings.filterwarnings("ignore")
 
 try:
     import GPUtil
@@ -33,11 +28,18 @@ def getpid():
 def getGPUids(_excluded):
     GPUs = GPUtil.getGPUs()
     gpu_ids = []
-
     for availableGPU in GPUs:
         gpu_ids.append(availableGPU.id)
-    if len(gpu_ids) != 0:
-        print("Available GPUS: ", gpu_ids)
+    gpu_ids = list(map(str, gpu_ids))
+    if _excluded:
+        _excluded = list(map(str, _excluded))
+        for ex in _excluded:
+            if ex in gpu_ids:
+                gpu_ids.remove(ex)
+        if len(gpu_ids) != 0:
+            print("Available GPUS: ", gpu_ids)
+        else:
+            raise RuntimeError("No GPUs available for computation.")
     return gpu_ids
 
 
@@ -54,8 +56,7 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     m_integrator = mm.LangevinMiddleIntegrator(310 * kelvin, 1 / picosecond, 0.002 * picoseconds)
     platform = mm.Platform.getPlatformByName('CUDA')
     # properties = {'DeviceIndex': f'{str(e_availableIDs)}', 'Precision': 'mixed'}
-    logging.debug(f"Building Properties...")
-    properties = {'DeviceIndex': '0', 'Precision': 'mixed'}
+    properties = {'DeviceIndex': str(e_availableIDs), 'Precision': 'mixed'}
     print('Running thermalization for ', e_protSteps)
     print('Running NPT equilibration for  ', e_eqSteps)
     print("Saving every ", eq_SaveF, " steps.\n")
@@ -79,11 +80,26 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
         boxLength = np.max(pos, axis=0) - np.min(pos, axis=0)
         x, y, z = boxLength[0], boxLength[1], boxLength[2]
         top.setBox(x * nanometer, y * nanometer, z * nanometer)
-        defaultParams = ["/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_prot.prm",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_cgenff.prm",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_cgenff.rtf",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_lipid.prm",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf"]
+        defaultParams = [
+            "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_prot.rtf",
+            "/home/scratch/ludovico/par_all36_prot_NOcomm.prm",
+            '/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_na.rtf',
+            '/home/scratch/ludovico/par_all36_na.prm',
+            "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf",
+            "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_lipid.prm",
+
+            "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_inositol.str",
+            "/home/scratch/MD_utilities/toppar_c36_jul20/stream/carb/toppar_all36_carb_glycolipid.str",
+            "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_cholesterol.str",
+            "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_sphingo.str",
+
+            "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_carb.prm",
+
+            "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_cgenff.prm",
+            "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_cgenff.rtf",
+
+            "/home/scratch/MD_utilities/toppar_c36_jul20/toppar_water_ions.str",
+        ]
         if e_userPar is not None and e_userTop is not None:
             user_parameters = [*e_userPar, *e_userTop]
             paramPATHS = defaultParams + user_parameters
@@ -99,12 +115,9 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     else:
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer,
                                   constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
-    logging.debug(f"Building System...")
-
     simulation_eq = Simulation(top.topology, system, m_integrator, platform, properties)
 
     simulation_eq.context.setPositions(coords.positions)
-    logging.debug(f"Context is Set...")
 
     e_totalSteps = int(e_protSteps + e_eqSteps)
 
@@ -114,7 +127,7 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     def ApplyRestraints(simulation_restraints, restraintIndexesLocal):
         print('\nAdding restraints...')
         restraint = mm.CustomExternalForce('k*periodicdistance(x, y, z, x0, y0, z0)^2')
-        restraint.addGlobalParameter('k', 10.0 * kilojoules_per_mole / nanometer)
+        restraint.addGlobalParameter('k', 5.0 * kilojoules_per_mole / nanometer)
         restraint.addGlobalParameter('t0', 0.0 * picoseconds)
         restraint.addPerParticleParameter('x0')
         restraint.addPerParticleParameter('y0')
@@ -177,19 +190,16 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
         print("Adding restraints to the ligand")
     print("Number of restrained atoms:\n", len(restraintIndexes))
     ApplyRestraints(simulation_eq, restraintIndexes)
-    logging.debug(f"Restraints Added...")
-
-    simulation_eq.reporters.append(
-        app.StateDataReporter('equilibration.std', 1000, step=True, totalSteps=e_totalSteps, remainingTime=True,
-                              potentialEnergy=True, temperature=True))
-    simulation_eq.reporters.append(app.DCDReporter('equilibration.dcd', eq_SaveF, enforcePeriodicBox=True))
-    logging.debug(f"Reporters Created...")
+    simulation_eq.reporters.append(app.StateDataReporter('equilibration.std', 1000, step=True, totalSteps=e_totalSteps, speed=True, remainingTime=True, potentialEnergy=True, kineticEnergy=True, temperature=True))
+    try:
+        simulation_eq.reporters.append(app.XTCReporter('equilibration.xtc', eq_SaveF, enforcePeriodicBox=True))
+    except:
+        simulation_eq.reporters.append(app.DCDReporter('equilibration.dcd', eq_SaveF, enforcePeriodicBox=True))
 
     print('\nMinimizing local energy...')
-    simulation_eq.minimizeEnergy(tolerance=0.1 * kilojoule / mole)
-    print('\nWarming up the complex with the restraints...')
-    logging.debug(f"Energy Minimized...")
+    simulation_eq.minimizeEnergy(tolerance=0.1 * kilojoule / (nanometer * mole))
 
+    print('\nWarming up the complex with the restraints...')
     T = 5
     mdstepsT = 6200
     for t_i in range(1, 63):
@@ -197,33 +207,26 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
         m_integrator.setTemperature(temperature)
         simulation_eq.context.setVelocitiesToTemperature(temperature)
         simulation_eq.step(int(mdstepsT / 62))
-    logging.debug(f"Protocol Finished...")
 
     print('\nEquilibrating with restraints and temperature...')
-    easing = int(e_protSteps * 0.2)
-    prot = int(e_protSteps - easing)
-    simulation_eq.step(prot)
-    logging.debug(f"Restrained EQUILIBRATION Finished...")
-
+    easing = int(e_protSteps * 0.8)
+    remaining_prot = int(e_protSteps - easing)
     print(f'\n{easing} steps easing "k" restraint...:')
-    count = 0
-    while count < easing:
-        for i_T in range(50, -1, -2):
-            r_i = (round(i_T * 0.1, 3))
-            simulation_eq.context.setParameter('k', r_i * kilocalories_per_mole / nanometer ** 2)
-            simulation_eq.step(1000)
-            count += 1000
-            logging.debug(f"Easing restraints with k= {r_i}")
-    logging.debug(f"\nEasing restrained EQUILIBRATION FINISHED")
-    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ',
-          e_eqSteps)
+    easingSteps: int = int(easing / 25)
+    for i_T in range(50, 0, -2):
+        r_i = (round(i_T * 0.1, 3))
+        r_i = max(r_i, 0)
+        print('restraint coefficient = ', r_i, "for ", easingSteps, "steps.")
+        simulation_eq.context.setParameter('k', r_i * kilocalories_per_mole / nanometer ** 2)
+        simulation_eq.step(easingSteps)
+    print("Completing the remaining protocol steps ", remaining_prot, " with k=0.1")
+    simulation_eq.context.setParameter('k', 0.1)  # safety measure
+    simulation_eq.context.reinitialize(True)
+    simulation_eq.step(remaining_prot)
+    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ', e_eqSteps)
     simulation_eq.context.setParameter('k', 0)
-    logging.debug(f"\nContext SET")
-
     simulation_eq.reporters.append(app.CheckpointReporter('equilibration_checkpnt.chk', e_eqSteps))
-    # simulation.reporters.append(app.DCDReporter('NPT_K0.dcd', 1000, enforcePeriodicBox=True))
     simulation_eq.step(e_eqSteps)
-    logging.debug(f"\nNPT EQUILIBRATION FINISHED")
 
     # saving the final coordinates
     positions = simulation_eq.context.getState(getPositions=True, enforcePeriodicBox=True).getPositions()
@@ -233,18 +236,15 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
 
     with open('equilibration_checkpnt.xml', 'w') as output:
         output.write(XmlSerializer.serialize(final_state))
-    logging.debug(f"\nFINAL STATE SAVED")
     simulation_eq.reporters.clear()
 
 
-def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU, m_number_of_steps,
-                        m_timeStep, p_saveF):
+def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU, m_number_of_steps, m_timeStep, p_saveF):
     os.makedirs(f"run_{p_replicas}", exist_ok=True)
     p_coords, p_top, charmm, params, gromacs = None, None, None, None, None
     platform = mm.Platform.getPlatformByName('CUDA')
     properties = {'DeviceIndex': f'{str(p_GPU)}', 'Precision': 'mixed'}
     integrator = mm.LangevinIntegrator(310 * kelvin, 1 / picosecond, m_timeStep * picoseconds)
-    logging.debug(f"\nPLATFORM INITIALIZED")
     if p_topology.endswith(".top") and eq_coordinates.endswith('.gro'):  # to be tested with gromacs
         gromacs = True
         p_coords = GromacsGroFile(eq_coordinates)
@@ -260,52 +260,51 @@ def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_repl
         x, y, z = boxLength[0], boxLength[1], boxLength[2]
         p_top = app.CharmmPsfFile(p_topology)
         p_top.setBox(x * nanometer, y * nanometer, z * nanometer)
-        defaultParams = ["/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_prot.prm",
+        defaultParams = ["/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_inositol.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/carb/toppar_all36_carb_glycolipid.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_carb.prm",
+                         # "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_prot.prm",
+                         "/home/scratch/ludovico/par_all36_prot_NOcomm.prm",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_prot.rtf",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_cgenff.prm",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_cgenff.rtf",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_lipid.prm",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf"]
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/toppar_water_ions.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_cholesterol.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_sphingo.str"]
         if p_userPar is not None and p_userTop is not None:
             user_parameters = [*p_userPar, *p_userTop]
             paramPATHS = defaultParams + user_parameters
         else:
             paramPATHS = defaultParams
         params = app.CharmmParameterSet(*paramPATHS)
-    logging.debug(f"\nPRODUCTION PARAMETERS LOADED")
 
     if gromacs:
-        p_top = GromacsTopFile(p_topology, periodicBoxVectors=p_coords.getPeriodicBoxVectors(),
-                               includeDir='/usr/local/gromacs/share/gromacs/top')
+        p_top = GromacsTopFile(p_topology, periodicBoxVectors=p_coords.getPeriodicBoxVectors(), includeDir='/usr/local/gromacs/share/gromacs/top')
     if charmm:
-        system = p_top.createSystem(params, nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer,
-                                    switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True,
-                                    hydrogenMass=4 * amu)
+        system = p_top.createSystem(params, nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
     else:
-        system = p_top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer,
-                                    switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True,
-                                    hydrogenMass=4 * amu)
-    logging.debug(f"\nSystem BUILT")
+        system = p_top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
 
     simulation_production = Simulation(p_top.topology, system, integrator, platform, properties)
     simulation_production.loadState("equilibration_checkpnt.xml")
-    logging.debug(f"\nPREVIOUS STATE SUCCESSFULLY LOADED")
-
-    simulation_production.reporters.append(
-        DCDReporter(f"run_{p_replicas}/Traj_{p_replicas}.dcd", p_saveF, enforcePeriodicBox=True))
+    simulation_production.loadCheckpoint("equilibration_checkpnt.chk")
+    try:
+        simulation_production.reporters.append(
+            XTCReporter(f"run_{p_replicas}/Traj_{p_replicas}.xtc", p_saveF, enforcePeriodicBox=True))
+    except:
+        simulation_production.reporters.append(
+            DCDReporter(f"run_{p_replicas}/Traj_{p_replicas}.dcd", p_saveF, enforcePeriodicBox=True))
     simulation_production.reporters.append(
         StateDataReporter(f'run_{p_replicas}/Traj_{p_replicas}.std', 1000, step=True, totalSteps=m_number_of_steps,
                           remainingTime=True, potentialEnergy=True, temperature=True))
-    logging.debug(f"\nPRODUCTION REPORTERS LOADED")
 
     simulation_production.step(m_number_of_steps)
-    logging.debug(f"\nPRODUCTION SIMULATION FINISHED")
-
     final_state = simulation_production.context.getState(getPositions=True, getVelocities=True, enforcePeriodicBox=True)
-    logging.debug(f"\nFINAL STATE CAPTURED.")
 
     with open(f'run_{p_replicas}/Traj_{p_replicas}.xml', 'w') as output:
         output.write(XmlSerializer.serialize(final_state))
-    logging.debug(f"\nFINAL STATE XML SAVED")
     simulation_production.reporters.clear()
 
 
@@ -332,11 +331,19 @@ def restart(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU,
         x, y, z = boxLength[0], boxLength[1], boxLength[2]
         p_top = app.CharmmPsfFile(p_topology)
         p_top.setBox(x * nanometer, y * nanometer, z * nanometer)
-        defaultParams = ["/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_prot.prm",
+        defaultParams = ["/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_inositol.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/carb/toppar_all36_carb_glycolipid.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_carb.prm",
+                         # "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_prot.prm",
+                         "/home/scratch/ludovico/par_all36_prot_NOcomm.prm",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_prot.rtf",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_cgenff.prm",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_cgenff.rtf",
                          "/home/scratch/MD_utilities/toppar_c36_jul20/par_all36_lipid.prm",
-                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf"]
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/top_all36_lipid.rtf",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/toppar_water_ions.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_cholesterol.str",
+                         "/home/scratch/MD_utilities/toppar_c36_jul20/stream/lipid/toppar_all36_lipid_sphingo.str"]
         if p_userPar is not None and p_userTop is not None:
             user_parameters = [*p_userPar, *p_userTop]
             paramPATHS = defaultParams + user_parameters
@@ -358,9 +365,13 @@ def restart(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU,
 
     simulation_production = Simulation(p_top.topology, system, integrator, platform, properties)
     simulation_production.loadState("equilibration_checkpnt.xml")
+    try:
+        simulation_production.reporters.append(
+            XTCReporter(f"run_{p_replicas}/Traj_{p_replicas}.xtc", p_saveF, enforcePeriodicBox=True, append=True))
+    except:
+        simulation_production.reporters.append(
+            DCDReporter(f"run_{p_replicas}/Traj_{p_replicas}.dcd", p_saveF, enforcePeriodicBox=True, append=True))
 
-    simulation_production.reporters.append(
-        DCDReporter(f"run_{p_replicas}/Traj_{p_replicas}.dcd", p_saveF, enforcePeriodicBox=True, append=True))
     simulation_production.reporters.append(
         StateDataReporter(f'run_{p_replicas}/Traj_{p_replicas}.std', 1000, step=True, totalSteps=m_number_of_steps,
                           remainingTime=True, potentialEnergy=True, temperature=True))
@@ -416,7 +427,7 @@ ap.add_argument('-ligresname', '--ligresname', type=str, action='append', defaul
                 help=' set -ligresname UNK to identify your small molecule resname [Default = UNL, UNK]')
 
 ap.add_argument('-in', '--integrator', type=float, required=False, help=' use -in to set the timestep in fs')
-ap.add_argument("-k", '--kill', required=False, action='store_true', default=False, help="kill the current process")
+ap.add_argument("-k", '--kill', required=False, action='store_true', help="kill the current process")
 ap.add_argument('-eq', '--eq', required=False, default=False, help='set -run to run the production')
 ap.add_argument('-run', '--run', required=False, default=False, help='set -run to run the production')
 ap.add_argument('-restart', '--restart', required=False, default=False,

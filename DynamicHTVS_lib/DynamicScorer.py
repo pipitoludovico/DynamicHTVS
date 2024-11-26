@@ -1,4 +1,4 @@
-import os
+from os import getcwd, listdir, path, getpid, cpu_count, system, chdir, makedirs, walk
 import sys
 import MDAnalysis
 import MDAnalysis.analysis.rms
@@ -8,31 +8,31 @@ from multiprocessing import Pool
 from subprocess import Popen
 import warnings
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-parameter_folder = os.path.join(script_dir, 'parameters')
+script_dir = path.dirname(path.abspath(__file__))
+parameter_folder = path.join(script_dir, 'parameters')
 
 warnings.filterwarnings('ignore')
 
-cpu = int(os.cpu_count() / 2)
+cpu = int(cpu_count() / 4)
 
 
-def getpid():
-    mypid = os.getpid()
+def writePID():
+    mypid = getpid()
     pidFile = open(".mypid_", "w")
     pidFile.write(str(mypid))
     pidFile.close()
 
 
 def wrap(using_amber=False):
-    if "complex.dcd" not in os.listdir("../../gbsa"):
-        ext = 'dcd' if any(file.endswith('dcd') for file in os.listdir('./')) else ""
+    # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/charmm/post_Docks/deprotonated_arachidonic_acid/system/run_1
+    if "complex.dcd" not in listdir("../../gbsa"):
+        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(file.endswith('xtc') for file in listdir('./')) else ''
         if ext == "":
+            print("No trajectory found in", getcwd())
             return
-        trajFile = \
-            [os.path.abspath(file) for file in os.listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
+        trajFile = [path.abspath(file) for file in listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
-            membraneResnames = (
-                'PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
+            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
             membraneResnames = ("POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL",
                                 "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
@@ -63,12 +63,12 @@ def wrap(using_amber=False):
         with open("filterTrj.vmd", "w") as vmdscr:
             for line in txt:
                 vmdscr.write(line)
-        os.system('vmd -dispdev text -e filterTrj.vmd > filterlog.log 2>&1')
+        system('vmd -dispdev text -e filterTrj.vmd > filterlog.log 2>&1')
 
 
 def rmsd(ligName, amber_rmsd):
     data = []
-    if "RMSDs.dat" not in os.listdir("../../gbsa"):
+    if "RMSDs.dat" not in listdir("../../gbsa"):
         PDB = "../../gbsa/complex.pdb" if not amber_rmsd else "../../gbsa/complex.prmtop"
         XTC = "../../gbsa/complex.dcd"
         u = MDAnalysis.Universe(PDB, XTC)
@@ -83,7 +83,6 @@ def rmsd(ligName, amber_rmsd):
         with open('../../gbsa/RMSDs.dat', 'w') as rmsdFile:
             for dat in data:
                 rmsdFile.write(str(dat) + "\n")
-
     else:
         with open('../../gbsa/RMSDs.dat', 'r') as rmsdFile:
             for line in rmsdFile:
@@ -91,15 +90,15 @@ def rmsd(ligName, amber_rmsd):
     return data
 
 
-def getPRMTOP(system=None):
+def getPRMTOP(system_=None):
     topFiles = ""
     parFiles = ""
-    for file in os.listdir(str(parameter_folder)):
+    for file in listdir(str(parameter_folder)):
         if file.endswith("rtf") or file.endswith('str'):
             topFiles += f"-top {parameter_folder}/{file} "
         if file.endswith('par') or file.endswith('prm'):
             parFiles += f"-param {parameter_folder}/{file} "
-    lj_parameter = [CustomParFile for CustomParFile in os.listdir("../") if CustomParFile.endswith("_LJ.par")][0]
+    lj_parameter = [CustomParFile for CustomParFile in listdir("../") if CustomParFile.endswith("_LJ.par")][0]
     parmed = open('parmed.inp', 'w')
     txt = ('chamber '
            f'{topFiles}'
@@ -109,10 +108,10 @@ def getPRMTOP(system=None):
            f'-psf %s.psf '
            f'-crd %s.pdb '
            f'-radii mbondi3\nparmout %s.prmtop') % (
-              system, system, system)
+              system_, system_, system_)
     parmed.write(txt)
     parmed.close()
-    Popen(f'parmed -i parmed.inp > {system}.log 2>&1', shell=True).wait()
+    Popen(f'parmed -i parmed.inp > {system_}.log 2>&1', shell=True).wait()
 
 
 def write_pbsa_in():
@@ -124,7 +123,7 @@ def write_pbsa_in():
 
 
 def csvTodat() -> list:
-    datFile = open("gbsa.dat", "a")
+    datFile = open("gbsa.dat", "w")
     try:
         data = []
         with open("gbsa.csv", "r") as D:
@@ -145,33 +144,35 @@ def csvTodat() -> list:
 
 def gbsa(_amber):
     GBSAs = []
-    os.chdir('../../gbsa')
-    if 'gbsa.dat' not in os.listdir("./"):
-        print("AMBER CHECK:", _amber)
-        if _amber is False:
-            if "complex.prmtop" not in os.listdir("./") or "receptor.prmtop" not in os.listdir(
-                    "./") or "ligand.prmtop" not in os.listdir("./"):
-                systems = ['complex', 'receptor', 'ligand']
-                for i in systems:
-                    getPRMTOP(system=i)
-        write_pbsa_in()
-        amberPATH = "$AMBERHOME/bin/MMPBSA.py"
-        command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
-        with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
-            Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
-
-        if 'gbsa.csv' in os.listdir('./'):
+    chdir('../../gbsa')
+    try:
+        if 'gbsa.csv' not in listdir("./"):
+            print("AMBER CHECK:", _amber)
+            if _amber is False:
+                if "complex.prmtop" not in listdir("./") or "receptor.prmtop" not in listdir(
+                        "./") or "ligand.prmtop" not in listdir("./"):
+                    systems = ['complex', 'receptor', 'ligand']
+                    for i in systems:
+                        getPRMTOP(system_=i)
+            write_pbsa_in()
+            amberPATH = "$AMBERHOME/bin/MMPBSA.py"
+            command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
+            with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
+                Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
+        if 'gbsa.dat' not in listdir('./'):
             GBSAs = csvTodat()
             return GBSAs
         else:
-            print(
-                "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
-            return [1, 1, 1, 1, 1]
-    else:
-        with open('gbsa.dat', 'r') as gbsaFile:
-            for gbsaline in gbsaFile:
-                GBSAs.append(float(gbsaline))
-        return GBSAs
+            with open('gbsa.dat', 'r') as gbsaFile:
+                for gbsaline in gbsaFile:
+                    GBSAs.append(float(gbsaline))
+            return GBSAs
+    except Exception as e:
+        print(
+            "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
+        print(repr(e))
+        print("Using a default array")
+        return [1, 1, 1, 1, 1]
 
 
 def score(RMSDsFull, GBSAsFull):
@@ -207,17 +208,18 @@ def getSummary(folder2analize, amber_):
     PATH_ = "DynamicScores"
     if amber_:
         PATH_ += "_amber"
-    if os.path.exists(PATH_):
-        os.system(f'rm {PATH_} -r')
-    os.makedirs(PATH_, exist_ok=True)
+    if path.exists(PATH_):
+        system(f'rm {PATH_} -r')
+    makedirs(PATH_, exist_ok=True)
     logPath = f"{PATH_}/DynamicScores.log"
     LOG = open(logPath, 'a')
-    for zincFolder, _, files in os.walk(folder2analize):
+    for zincFolder, _, files in walk(folder2analize):
         if 'DES.txt' in files:
             scoreslog = Path('%s/DES.txt' % zincFolder)
+            print("GETTING DES SCORE FROM", scoreslog)
             if scoreslog.is_file():
                 with open(scoreslog, 'r') as f:
-                    pathResult = os.path.abspath(zincFolder)
+                    pathResult = path.abspath(zincFolder)
                     for line in f:
                         LOG.write(pathResult + " " + line + "\n")
     LOG.close()
@@ -225,30 +227,39 @@ def getSummary(folder2analize, amber_):
 
 
 def GBSAcalculatorWrapper(folder, mothFolder, gbsa_amber):
-    os.chdir(folder)
+    chdir(folder)
     wrap(gbsa_amber)
     RMSDs = rmsd("UNL", gbsa_amber)
-    GBSAs = gbsa(gbsa_amber)
-    score(RMSDs, GBSAs)
-    os.chdir(mothFolder)
+    if RMSDs:
+        GBSAs = gbsa(gbsa_amber)
+        if GBSAs:
+            score(RMSDs, GBSAs)
+        else:
+            print("GBSA failed in", folder)
+    else:
+        print("RMSD calculation failed in ", folder)
+    chdir(mothFolder)
 
 
 def main(m_amber):
     folder2analize = './post_Docks/' if not m_amber else './post_Docks_amber/'
-    getpid()
-    mothFolder = os.getcwd()
+    print("Folder to analyse ", folder2analize)
+    writePID()
+    mothFolder = getcwd()
     processes = []
     with Pool(processes=cpu) as p:
-        for zincFolder, _, files in os.walk(folder2analize):
+        for productionFolder, _, files in walk(folder2analize):
             for file in files:
-                if file.startswith('Traj_') and file.endswith('.dcd'):
-                    gbsa_process = p.apply_async(GBSAcalculatorWrapper, (zincFolder, mothFolder, amber,))
+                if file.startswith('Traj_') and file.endswith(('.dcd', '.xtc')):
+                    gbsa_process = p.apply_async(GBSAcalculatorWrapper, (productionFolder, mothFolder, amber,))
                     processes.append(gbsa_process)
         for pro in processes:
-            pro.get(timeout=36000)
-    p.close()
-    p.join()
-
+            try:
+                pro.get()
+            except Exception as e:
+                print(f"GBSA timedout for: {processes.index(pro)}")
+                print(e)
+                print("Pool will try to complete the remaining processes.")
     getSummary(folder2analize, amber)
 
 

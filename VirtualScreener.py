@@ -14,22 +14,25 @@ OPENMM_SCRIPT_PATH = os.path.join(package_dir, 'openmm_pipeline_VS.py')
 Dynamic = os.path.join(package_dir, 'DynamicScorer.py')
 
 ap = ArgParser.ArgParser()
-dock, rank, parametrize, build, calculate, selection, amber, launch, batch, exclude, consider, prt, membraneList, boxsize = ap.argumentParser()
+dock, rank, parametrize, build, calculate, selection, amber, launch, batch, exclude, consider, prt, membraneList, boxsize, ligands, poses = ap.argumentParser()
 
 
 def main():
     os.makedirs('logs', exist_ok=True)
     ROOT = os.getcwd()
+    if ligands:
+        ligandType, fullLigandPath = ligands[0], ligands[1]
+    else:
+        ligandType, fullLigandPath = None, None
+
     if dock:
         print("*" * 200)
-        print("\nDocking the database...")
         # Dock your database
         if not selection:
             print("Please add a selection using the -sel argument")
             exit()
-        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize)
-        dbDocker.MolsFromSmiles()
-        dbDocker.DockMols(selection, amber)
+        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligandType, fullLigandPath, poses)
+        dbDocker.DockMols(selection)
         print("\n\nDocking completed.")
         print("*" * 200)
     os.chdir(ROOT)
@@ -58,12 +61,10 @@ def main():
 
     #  ligands
     if parametrize:
-        import DynamicHTVS_lib.FindAndMoveLigands
-        Result_Folders = DynamicHTVS_lib.FindAndMoveLigands.FindAndMoveLigands(amber, consider)
+        Result_Folders = Utility.FindAndMoveLigands(amber, consider)
         print("*" * 200)
         if amber:
             print("Building AMBER Ligand Parameters\n\n")
-            os.makedirs('post_Docks_amber', exist_ok=True)
             from DynamicHTVS_lib.LigandTools.Parameterizer_AMBER import RunParameterize
             RunParameterize(Result_Folders)
         else:
@@ -75,7 +76,7 @@ def main():
     if build:
         Result_Folders = Utility.GetReultFolders(amber)
         print("@" * 200)
-        print("Building systems and running OpenMM...")
+        print("Building systems...")
         if len(Result_Folders) == 0:
             exit(
                 "No post_Docks_amber folder found. Make sure you have run the docking first or create this folder manually.")
