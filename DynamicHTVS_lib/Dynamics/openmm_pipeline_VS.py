@@ -386,14 +386,14 @@ def restart(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU,
 def GetCoordinatesAndTopology():
     _coordinates, _topology = None, None
     if any(file_.endswith('.psf') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [pdb for pdb in os.listdir('./') if pdb.endswith('.pdb')][0]
-        _topology = [psf for psf in os.listdir('./') if psf.endswith('.psf')][0]
+        _coordinates = [pdb for pdb in os.listdir('../') if pdb.endswith('.pdb')][0]
+        _topology = [psf for psf in os.listdir('../') if psf.endswith('.psf')][0]
     if any(file_.endswith('.prmtop') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [inpcrd for inpcrd in os.listdir('./') if inpcrd.endswith('.inpcrd')][0]
-        _topology = [prmtop for prmtop in os.listdir('./') if prmtop.endswith('.prmtop')][0]
+        _coordinates = [inpcrd for inpcrd in os.listdir('../') if inpcrd.endswith('.inpcrd')][0]
+        _topology = [prmtop for prmtop in os.listdir('../') if prmtop.endswith('.prmtop')][0]
     if any(file_.endswith('.gro') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [gro for gro in os.listdir('./') if gro.endswith('.gro')][0]
-        _topology = [groTOP for groTOP in os.listdir('./') if groTOP.endswith('.top')][0]
+        _coordinates = [gro for gro in os.listdir('../') if gro.endswith('.gro')][0]
+        _topology = [groTOP for groTOP in os.listdir('../') if groTOP.endswith('.top')][0]
     return _coordinates, _topology
 
 

@@ -4,9 +4,9 @@ from os import makedirs
 from shutil import copy2
 from subprocess import Popen, DEVNULL, PIPE
 
-from .SmilesCleaner import SmilesCleaner
-from .Filter import Filter
-from .Utility import LastFrameWriterCHARMM, LastFrameWriterAMBER, LastFrameWriterAMBERforGBSA
+from DynamicHTVS_lib.Docking.SmilesCleaner import SmilesCleaner
+from DynamicHTVS_lib.Docking.Filter import Filter
+from DynamicHTVS_lib.Utilities.Utility import LastFrameWriterCHARMM, LastFrameWriterAMBER, LastFrameWriterAMBERforGBSA
 
 import pandas as pd
 from rdkit import Chem
@@ -30,7 +30,7 @@ class DatabaseDocker:
 
     def CheckNecessaryFiles(self, amberCheck):
         try:
-            self.database = [file for file in os.listdir('./') if file.endswith('.smi')]
+            self.database = [file for file in os.listdir('../') if file.endswith('.smi')]
             if len(self.database) > 1:
                 print("More than one .smi file found. Please keep only the .smi file you want to use")
                 exit()

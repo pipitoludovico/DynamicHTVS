@@ -1,4 +1,4 @@
-from os import path, getcwd, chdir, cpu_count, listdir, system
+from os import path, getcwd, chdir, cpu_count, listdir, stat
 
 from rdkit import Chem
 from multiprocessing import Pool
@@ -14,8 +14,9 @@ def MakeMol2(pdbPath, folder) -> None:
         # RDkit to get the formal charge
         molOutName = str(pdbPath).replace('.pdb', '.mol2')
         run(f"sed -i '/^ATOM/!d' {pdbPath}", shell=True)
-        if not path.exists(molOutName):
-            run(f'obabel -i pdb {pdbPath} -o mol2 -O {molOutName}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
+        if not path.exists(".already_parameterized"):
+            if not path.exists(molOutName) or stat(molOutName) != 0:
+                run(f'obabel -i pdb {pdbPath} -o mol2 -O {molOutName}; touch .already_parameterized;', stdout=DEVNULL, stderr=DEVNULL, shell=True)
     except Exception as e:
         print("An error occurred during the parameterization of: ", pdbPath, e)
         chdir(cwd)
@@ -44,11 +45,11 @@ def SwapCoordinates(template, destination):
                 line_coords = coords.readline()
                 if len(line_coords.split()) == 9:
                     atom_id = line_template[0:19]
-                    x = line_coords.split()[2]
-                    y = line_coords.split()[3]
-                    z = line_coords.split()[4]
+                    coor = line_coords.split()[2] + "\t" + line_coords.split()[3] + "\t" + line_coords.split()[4]
+
                     rest = line_template[50:]
-                    mol2.write(f"{atom_id} {x}\t{y}\t{z} {rest}")
+                    print(atom_id, coor, rest)
+                    mol2.write(f"{atom_id}{coor} {rest}")
                 else:
                     mol2.write(line_template)
     run(f"cp temp.mol2 {destination}", shell=True)
@@ -57,7 +58,7 @@ def SwapCoordinates(template, destination):
 def ParameterizeLigands(pdbPath, folder) -> None:
     chdir(folder)  # post_Dock_amber/ligand/1
     molOutName = str(pdbPath).replace('.pdb', '.mol2')
-    if not path.exists('sqm.out') and not path.exists('./system'):
+    if not (path.exists('sqm.out') or path.exists("logs/sqm.out")):
         try:
             mol_for_charge = Chem.MolFromMol2File(str(molOutName))
             formal_charge = Chem.GetFormalCharge(mol_for_charge)
@@ -76,15 +77,16 @@ def ParameterizeLigands(pdbPath, folder) -> None:
             chdir(cwd)
     # we copy the coordinates of the different poses but import the atom types and bonds of the parameterized mol2
     # I know... very unelegant. But it works.
-    if all(path.exists(file) for file in ("UNL.frcmod", "sqm.out")):
+    if path.exists("UNL.frcmod"):
         # we get pose1.mol2 as a template
         templateMOL2 = [path.join(".", mol2) for mol2 in listdir(".") if mol2.endswith(".mol2") and "pose" in mol2][0]
         this = getcwd()
-        for x in listdir(path.join(this, "../")):
+        for x in listdir("../"):
             full_path = path.join(this, "../", x)
             if x != path.basename(this) and path.isdir(full_path):
                 destination = [path.join("../", x, mol2) for mol2 in listdir(full_path) if mol2.endswith(".mol2") and "pose" in mol2][0]
                 SwapCoordinates(templateMOL2, destination)
+                run(f"cp UNL.frcmod ../{x}", shell=True)
     chdir(cwd)
 
 
@@ -102,13 +104,12 @@ def RunParameterize(ResultFolders: list) -> None:
                             processes.append(process)
             for proc in processes:
                 proc.get()
-
             processes = []
             for mainLigandFolder in ResultFolders:
-                for poseFolder in sorted(listdir(mainLigandFolder)[0]):
+                for poseFolder in sorted(listdir(mainLigandFolder)[0]):  # we get in the first pose to derive parameters for all
                     resultPath = path.abspath(path.join(mainLigandFolder, poseFolder))
                     for file in listdir(resultPath):
-                        if file.endswith('.pdb') and not file.startswith('renum'):
+                        if file.endswith('.pdb') and "pose" in file:
                             pdbPath = path.join(resultPath, file)
                             process = p.apply_async(ParameterizeLigands, (pdbPath, resultPath))
                             processes.append(process)

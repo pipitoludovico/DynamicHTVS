@@ -2,10 +2,9 @@
 import os
 from time import perf_counter
 
-from DynamicHTVS_lib import DatabaseDocker
-from DynamicHTVS_lib import DockingRanker
-from DynamicHTVS_lib import ArgParser
-from DynamicHTVS_lib import Utility
+from DynamicHTVS_lib.Docking import DatabaseDocker, DockingRanker
+from DynamicHTVS_lib.CLI_Parser import ArgParser
+from DynamicHTVS_lib.Utilities import Utility
 
 import importlib.resources
 
@@ -18,15 +17,21 @@ dock, rank, parametrize, build, calculate, selection, amber, launch, batch, excl
 
 
 def main():
+    print("\n")
+    print("*" * 50)
+    print("*" * 50)
+    print("Weighted Ensemble Dynamic Virtual Screening")
+    print("*" * 50)
+    print("*" * 50)
+
     os.makedirs('logs', exist_ok=True)
     ROOT = os.getcwd()
     if ligands:
         ligandType, fullLigandPath = ligands[0], ligands[1]
     else:
         ligandType, fullLigandPath = None, None
-
     if dock:
-        print("*" * 200)
+        print("*" * 50)
         # Dock your database
         if not selection:
             print("Please add a selection using the -sel argument")
@@ -34,11 +39,11 @@ def main():
         dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligandType, fullLigandPath, poses)
         dbDocker.DockMols(selection)
         print("\n\nDocking completed.")
-        print("*" * 200)
+        print("*" * 50)
     os.chdir(ROOT)
 
     if rank:
-        print("*" * 200)
+        print("*" * 50)
         print("Ranking results...")
         # Rank your results
         receptorPath = DatabaseDocker.DatabaseDocker(amber, boxsize).GetReceptorPath()
@@ -48,7 +53,7 @@ def main():
         ranker.CreateSummaryChart()
         ranker.SortSummary(consider)
         print("\nRanking completed.\n")
-        print("*" * 200)
+        print("*" * 50)
     os.chdir(ROOT)
 
     #  receptor
@@ -62,7 +67,7 @@ def main():
     #  ligands
     if parametrize:
         Result_Folders = Utility.FindAndMoveLigands(amber, consider)
-        print("*" * 200)
+        print("*" * 50)
         if amber:
             print("Building AMBER Ligand Parameters\n\n")
             from DynamicHTVS_lib.LigandTools.Parameterizer_AMBER import RunParameterize
@@ -75,7 +80,7 @@ def main():
 
     if build:
         Result_Folders = Utility.GetReultFolders(amber)
-        print("@" * 200)
+        print("@" * 50)
         print("Building systems...")
         if len(Result_Folders) == 0:
             exit(
@@ -97,7 +102,7 @@ def main():
     # Calculate the Dynamic Score
     if calculate:
         print("")
-        print("#" * 200)
+        print("#" * 50)
         print("Calculating Scores...")
         os.system(f'python {Dynamic} {amber}')
         print("Scoring completed")

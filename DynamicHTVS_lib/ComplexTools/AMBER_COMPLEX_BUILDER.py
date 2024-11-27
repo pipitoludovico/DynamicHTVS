@@ -10,8 +10,8 @@ def CreateComplex(folder) -> None:
     chdir(folder)
     makedirs('system', exist_ok=True)
     makedirs('gbsa', exist_ok=True)
-    if path.exists('sqm.out') or path.exists("logs/sqm.out"):
-        molfile = [file for file in listdir("./") if file.endswith('.mol2')][0]
+    molfile = [file for file in listdir("./") if file.endswith('.mol2')][0]
+    if path.exists(molfile) and path.exists("UNL.frcmod"):
         RECEPTOR_PATH = path.abspath('../../../receptor/forGBSA.pdb')
         # prepare the system for GBSA
         Tleap.TleapLigand(mol2path=molfile, name="ligand")  # ligand prmtop
@@ -47,8 +47,10 @@ def BuildAMBERsystems(ResultsFolders) -> None:
             for mainLigandFolder in ResultsFolders:
                 for poseFolder in listdir(mainLigandFolder):
                     subfolder = f"{mainLigandFolder}/{poseFolder}"
-                    if all(path.exists(path.join(subfolder, file)) for file in ("UNL.frcmod", "sqm.out")):
-                        processes.append(p.apply_async(CreateComplex, (subfolder,)))
+                    for file in listdir(subfolder):
+                        if file == "UNL.frcmod":
+                            print(subfolder)
+                            processes.append(p.apply_async(CreateComplex, (subfolder,)))
             for proc in processes:
                 proc.get(36000)
 

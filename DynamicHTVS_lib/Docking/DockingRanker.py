@@ -14,7 +14,7 @@ class DockingRanker:
         os.chdir("./Docking_folder/" + r_dock_folder)
         os.makedirs('analysis', exist_ok=True)
         try:
-            docking_result = [file_in_dockFolder for file_in_dockFolder in os.listdir('./') if "_out.pdbqt" in file_in_dockFolder][0]
+            docking_result = [file_in_dockFolder for file_in_dockFolder in os.listdir('../') if "_out.pdbqt" in file_in_dockFolder][0]
             Popen(f"obabel -i pdbqt {docking_result} -o pdb -O analysis/{docking_result.replace('.pdbqt', '')}_pose.pdb -m", shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
             with open(docking_result, 'r') as docking_result_out:
                 modelCount = 1
@@ -43,7 +43,7 @@ class DockingRanker:
 
     def GetContactsWrapper(self, folder, g_receptorPath):
         os.chdir(self.ROOT + "/Docking_folder/" + folder + "/analysis")
-        poses = [pose for pose in os.listdir('./') if pose.endswith(".pdb") and "out_pose" in pose]
+        poses = [pose for pose in os.listdir('../') if pose.endswith(".pdb") and "out_pose" in pose]
         with open(poses[0], 'r') as poseFile:
             resname = None
             for line in poseFile.readlines():

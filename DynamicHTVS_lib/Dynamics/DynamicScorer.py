@@ -26,11 +26,12 @@ def writePID():
 def wrap(using_amber=False):
     # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/charmm/post_Docks/deprotonated_arachidonic_acid/system/run_1
     if "complex.dcd" not in listdir("../../gbsa"):
-        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(file.endswith('xtc') for file in listdir('./')) else ''
+        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('../')) else "xtc" if any(file.endswith('xtc') for file in listdir(
+            '../')) else ''
         if ext == "":
             print("No trajectory found in", getcwd())
             return
-        trajFile = [path.abspath(file) for file in listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
+        trajFile = [path.abspath(file) for file in listdir("../") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
             membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
@@ -98,7 +99,7 @@ def getPRMTOP(system_=None):
             topFiles += f"-top {parameter_folder}/{file} "
         if file.endswith('par') or file.endswith('prm'):
             parFiles += f"-param {parameter_folder}/{file} "
-    lj_parameter = [CustomParFile for CustomParFile in listdir("../") if CustomParFile.endswith("_LJ.par")][0]
+    lj_parameter = [CustomParFile for CustomParFile in listdir("../../") if CustomParFile.endswith("_LJ.par")][0]
     parmed = open('parmed.inp', 'w')
     txt = ('chamber '
            f'{topFiles}'
@@ -146,11 +147,11 @@ def gbsa(_amber):
     GBSAs = []
     chdir('../../gbsa')
     try:
-        if 'gbsa.csv' not in listdir("./"):
+        if 'gbsa.csv' not in listdir("../"):
             print("AMBER CHECK:", _amber)
             if _amber is False:
-                if "complex.prmtop" not in listdir("./") or "receptor.prmtop" not in listdir(
-                        "./") or "ligand.prmtop" not in listdir("./"):
+                if "complex.prmtop" not in listdir("../") or "receptor.prmtop" not in listdir(
+                        "../") or "ligand.prmtop" not in listdir("../"):
                     systems = ['complex', 'receptor', 'ligand']
                     for i in systems:
                         getPRMTOP(system_=i)
@@ -159,7 +160,7 @@ def gbsa(_amber):
             command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
             with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
                 Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
-        if 'gbsa.dat' not in listdir('./'):
+        if 'gbsa.dat' not in listdir('../'):
             GBSAs = csvTodat()
             return GBSAs
         else:

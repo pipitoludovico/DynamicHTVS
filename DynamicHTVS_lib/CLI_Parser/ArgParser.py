@@ -2,20 +2,28 @@ import argparse
 import shutil
 from os import remove
 import GPUtil
+from DynamicHTVS_lib.Utilities import Links
 
-from .Utility import *
+
+from DynamicHTVS_lib.Utilities.Utility import *
 
 
 class ArgParser:
     def __init__(self):
         GetRightSettings()
-        self.argumentParser()
+        from random import randrange, randint
+        x = randint(0, 100)
+        if x > 80:
+            random_index = randrange(len(Links.zio))
+            print(Links.zio[random_index])
 
     @staticmethod
     def argumentParser():
         ap = argparse.ArgumentParser()
         ap.add_argument("-d", '--dock', action='store_true', required=False,
                         help="set -d True to rerun the docking [Default=False] ")
+        ap.add_argument("-md", "--md", action='store_true', required=False,
+                        help="add -md to run the full pipeline. [Default=False]")
         ap.add_argument("-r", '--rank', action='store_true', required=False,
                         help="set -r True to rerun the ranking [Default=False] ")
         ap.add_argument("-p", '--parameterize', action='store_true', required=False,
@@ -30,14 +38,17 @@ class ArgParser:
                         help="set -c True to rerun the Dynamic Score calculation [Default=False] ")
         ap.add_argument("-amber", '--amber', action='store_true', required=False,
                         help="set -amber to use AMBER instead of CHARMM [Default=False] ")
-        ap.add_argument("-batch", "-batch", required=False, type=int, default=None, choices=range(1, len(GPUtil.getGPUs()) + 1),
+        ap.add_argument("-batch", "-batch", required=False, type=int, default=None,
+                        choices=range(1, len(GPUtil.getGPUs()) + 1),
                         help="add -batch to specify the number of parallel simulations you want to run on your machine [Default == number of available GPUS]")
         ap.add_argument("-consider", "-consider", required=False, type=int, default=20,
                         help="add -consider to specify the number compounds you want to consider for MD from your docking results [Default == 20]")
         ap.add_argument("-boxsize", "-bs", required=False, type=int, default=12,
                         help="add -boxsize -bs to set the grid box size [Default == 12]")
-        ap.add_argument("-poses", "-poses", required=False, type=int, default=1, help="add -poses to set how many docking poses you want to generate")
-        ap.add_argument('-e', '--exclude', nargs='*', required=False, help=' use -e to exclude a list of GPUs from being used by the Dynamic Screener: e.g. -e 0 3')
+        ap.add_argument("-poses", "-poses", required=False, type=int, default=1,
+                        help="add -poses to set how many docking poses you want to generate")
+        ap.add_argument('-e', '--exclude', nargs='*', required=False,
+                        help=' use -e to exclude a list of GPUs from being used by the Dynamic Screener: e.g. -e 0 3')
         ap.add_argument("-sel", '--selection', required=False, type=str, nargs="+",
                         help="a selection -sel between quotes is required for the docking using VMD's selection language.")
         ap.add_argument("-prt", "-prt", required=False, type=int, default=10,
@@ -52,7 +63,7 @@ class ArgParser:
             confirmation = input(
                 "Do you really want to purge this folder? It will keep only the .smi file and the 'equilibration' folder in this working directory! [Y/N]")
             if confirmation.upper().startswith('Y'):
-                for element in listdir("./"):
+                for element in listdir("../"):
                     if not path.isdir(element):
                         if not element.endswith('.smi'):
                             remove(element)
@@ -68,4 +79,8 @@ class ArgParser:
         else:
             joinedSel = None
 
+        if args.md:
+            parametrize, build, calculate, launch = True, True, True, True
         return dock, rank, parametrize, build, calculate, joinedSel, amber, launch, batch, exclude, args.consider, prt, args.membraneRestraints, args.boxsize, ligands, poses
+
+

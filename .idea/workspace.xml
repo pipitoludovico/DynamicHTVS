@@ -6,23 +6,18 @@
   <component name="ChangeListManager">
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ArgParser.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ArgParser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ArgParser.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/CLI_Parser/ArgParser.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/CHARMM_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/CHARMM_COMPLEX_BUILDER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/DatabaseDocker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/DockingRanker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/DynamicScorer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/FindAndMoveLigands.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/Filter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_AMBER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_CHARMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ReceptorTools/PrepareReceptor_CHARMM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Utility.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Utility.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/openmm_pipeline_VS.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/openmm_pipeline_VS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ParameterizeResultsForCHARMM.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/SmilesCleaner.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/SmilesCleaner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Utility.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Utilities/Utility.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/openmm_pipeline_VS.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/openmm_pipeline_VS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VirtualScreener.py" beforeDir="false" afterPath="$PROJECT_DIR$/VirtualScreener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,16 +57,71 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.PdbDocker.executor&quot;: &quot;Run&quot;,
-    &quot;Python.asd.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/ludovico/PycharmProjects/Cheminformatics/DynamicHTVS&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.ArgParser.executor": "Run",
+    "Python.Links.executor": "Run",
+    "Python.PdbDocker.executor": "Run",
+    "Python.asd.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/home/ludovico/PycharmProjects/Cheminformatics/DynamicHTVS"
   }
-}</component>
-  <component name="RunManager" selected="Python.asd">
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/DynamicHTVS_lib/Utilities" />
+      <recent name="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics" />
+      <recent name="$PROJECT_DIR$/DynamicHTVS_lib/Docking" />
+      <recent name="$PROJECT_DIR$/DynamicHTVS_lib/Parser" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.ArgParser">
+    <configuration name="ArgParser" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="DynamicHTVS" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DynamicHTVS_lib/CLI_Parser" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DynamicHTVS_lib/CLI_Parser/ArgParser.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Links" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="DynamicHTVS" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DynamicHTVS_lib/Utilities" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Links.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="PdbDocker" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="DynamicHTVS" />
       <option name="ENV_FILES" value="" />
@@ -140,6 +190,8 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.ArgParser" />
+        <item itemvalue="Python.Links" />
         <item itemvalue="Python.asd" />
         <item itemvalue="Python.PdbDocker" />
         <item itemvalue="Python.ReverseString" />
