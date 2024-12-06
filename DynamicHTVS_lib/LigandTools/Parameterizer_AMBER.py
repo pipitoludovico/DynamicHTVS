@@ -62,18 +62,19 @@ def ParameterizeLigands(pdbPath, folder) -> None:
         try:
             mol_for_charge = Chem.MolFromMol2File(str(molOutName))
             formal_charge = Chem.GetFormalCharge(mol_for_charge)
-        except Exception:
+        except Exception as e:
+            print(repr(e))
             mol_for_charge = Chem.MolFromMol2File(str(molOutName) + "_backup")
             formal_charge = Chem.GetFormalCharge(mol_for_charge)
         try:
             with open('antechamber.out', 'w') as anteOut, open('antechamber.err', 'w') as anteErr:
-                run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc {formal_charge} -rn UNL -at gaff2 -pl -1",
-                    shell=True, stdout=anteOut, stderr=anteErr)
-                run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut,
-                    stderr=anteErr)
+                run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc {formal_charge} -rn UNL -at gaff2 -pl -1", shell=True, stdout=anteOut, stderr=anteErr)
+                run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
         except CalledProcessError:
-            print("X" * 200)
-            print("antechamber failed with: ", pdbPath)
+            print("X" * 50)
+            print(f"antechamber failed with charge {formal_charge} ", pdbPath, ". It will try now again assuming a formal charge of 0 and spin 1.")
+            run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc 0 -rn UNL -at gaff2 -pl -1", shell=True, stdout=anteOut, stderr=anteErr)
+            run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
             chdir(cwd)
     # we copy the coordinates of the different poses but import the atom types and bonds of the parameterized mol2
     # I know... very unelegant. But it works.

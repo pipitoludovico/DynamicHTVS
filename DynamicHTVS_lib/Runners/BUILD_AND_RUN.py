@@ -1,5 +1,5 @@
+import os
 from os import listdir, getcwd, walk, makedirs, path, chdir
-from time import sleep
 import GPUtil
 from subprocess import Popen
 from multiprocessing import Pool
@@ -55,22 +55,25 @@ def CheckIfCompleted():
 def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membraneList) -> None:
     """Runs the openmm pipeline inside the folder, equilibrating and producing a trajectory."""
     chdir(_fol + "/system")
-    if path.exists('structure.psf') and path.exists('structure.pdb'):
-        membraneL = f"-membraneRestraints {membraneList}" if membraneList else ""
+    if (path.exists('structure.psf') and path.exists('structure.pdb')) or (path.exists('complex.prmtop') and path.exists('complex.inpcrd')):
+        membraneL = f"-membraneRestraints {''.join(membraneList)}" if membraneList else ""
         exclusion = "-e " + " ".join(excluded) + " " if excluded else ""
         if path.exists('all.pdb'):
             Popen("rm all.*;rm ligand*;rm solvated*;", shell=True)
-        if not path.exists("new_file_char.top"):
+        if not path.exists("new_file_char.top") and not amber:
             Popen("cp ../new_file_char.top .", shell=True)
         command = f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -pt 3 -et 1 -prt {prt} {membraneL} -gpu {r_gpu} -in 4 -eq EQ -run RUN > openmm.log 2>&1' if amber else f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -up ./combined_pars.par -ut ./new_file_char.top -pt 3 -et 1 -prt {prt} {membraneL} -gpu {r_gpu} -in 4 -eq EQ -run RUN > openmm.log 2>&1'
         if not path.exists('.dontrestart'):
-            print("Cleaning previous unfinished trajectories in ", _fol)
-            for previousTraj in listdir('./'):
-                if previousTraj.endswith("xtc"):
-                    Popen(f"rm *.xtc ./run*/*.xtc", shell=True).wait()
-                if previousTraj.endswith("dcd"):
-                    Popen(f"rm *.dcd ./run*/*.dcd", shell=True).wait()
+            if path.exists("./run_1"):
+                if any(path.exists(old) for old in os.listdir("./run_1") if old.endswith(("xtc", "dcd"))):
+                    print("Cleaning previous unfinished trajectories in ", _fol)
+                    for previousTraj in listdir('./'):
+                        if previousTraj.endswith("xtc"):
+                            Popen(f"rm *.xtc ./run*/*.xtc", shell=True).wait()
+                        if previousTraj.endswith("dcd"):
+                            Popen(f"rm *.dcd ./run*/*.dcd", shell=True).wait()
             Popen(command, shell=True).wait()
+            print("SPOTTED", command, getcwd())
             CheckIfCompleted()
         else:
             print("There is a hidden tagfile called .dontrestart in", _fol,
@@ -96,11 +99,10 @@ def RunOpenMMbatches(ligandFolders, SCRIPT_PATH, amber, batch, exclude, prt, mem
         for pose in listdir(ligand):
             ALL.append(f"{ligand}/{pose}")
     groupedPostDockMainLigandFolders = [ALL[i:i + batch] for i in range(0, len(ALL), batch)]
-    print(groupedPostDockMainLigandFolders)
     print("#" * 200)
-    print("Running OpenMM")
-    count = 0
+    print("Running OpenMM", amber)
     with Pool(processes=batch) as p:
+        count = 0
         for poses in groupedPostDockMainLigandFolders:
             ComplexProcesses = []
             for pose in poses:

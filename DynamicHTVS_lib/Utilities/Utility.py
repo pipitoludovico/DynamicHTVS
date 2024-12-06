@@ -106,7 +106,7 @@ def LastFrameWriterCHARMM(topPath: str, trjPath: str) -> None:
 
 def LastFrameWriterAMBER(topPath: str, trjPath: str) -> None:
     trajin_ = [f"parm {topPath}",
-               f"trajin {trjPath} lastframe"
+               f"trajin {trjPath} lastframe",
                "outtraj allAtoms.pdb"]
 
     with open('last_frame_getter.in', 'w') as trajinFile:
@@ -116,7 +116,7 @@ def LastFrameWriterAMBER(topPath: str, trjPath: str) -> None:
 
 def LastFrameWriterAMBERforGBSA(topPath: str, trjPath: str) -> None:
     trajin_ = [f"parm {topPath}",
-               f"trajin {trjPath}",
+               f"trajin {trjPath} lastframe",
                "strip :WAT,HOH,TIP3,TIP4P,TIP5P,SPC,SOL",
                "strip :Na+,Cl-,K+,Mg2+,Ca2+,Zn2+,Fe2+,Fe3+,Cu+,Cu2+,Mn2+,Co2+,Ni2+,Br-,I-,Cs+,Rb+,Li+",
                "outtraj forGBSA.pdb pdb"]

@@ -4,16 +4,20 @@ from os import remove
 import GPUtil
 from DynamicHTVS_lib.Utilities import Links
 
-
 from DynamicHTVS_lib.Utilities.Utility import *
 
 
 class ArgParser:
+    """Takes a list of CLI and returns a dictionary with all the commands. This class has a set of default options
+    listed.
+    -d: str  = activates docking
+    -restrict: = restricts the poses to the distance selection criteria
+    """
     def __init__(self):
         GetRightSettings()
         from random import randrange, randint
         x = randint(0, 100)
-        if x > 80:
+        if x > 98:
             random_index = randrange(len(Links.zio))
             print(Links.zio[random_index])
 
@@ -22,6 +26,8 @@ class ArgParser:
         ap = argparse.ArgumentParser()
         ap.add_argument("-d", '--dock', action='store_true', required=False,
                         help="set -d True to rerun the docking [Default=False] ")
+        ap.add_argument('-restrict', '--restrict', nargs='*', required=False,
+                        help=' use -restrict narrow your docking selection only to those results that match your restiction. Example: -restrict "protein and resid 199" "resname UNL and name O2" [Default=None]')
         ap.add_argument("-md", "--md", action='store_true', required=False,
                         help="add -md to run the full pipeline. [Default=False]")
         ap.add_argument("-r", '--rank', action='store_true', required=False,
@@ -63,7 +69,7 @@ class ArgParser:
             confirmation = input(
                 "Do you really want to purge this folder? It will keep only the .smi file and the 'equilibration' folder in this working directory! [Y/N]")
             if confirmation.upper().startswith('Y'):
-                for element in listdir("../"):
+                for element in listdir("./"):
                     if not path.isdir(element):
                         if not element.endswith('.smi'):
                             remove(element)
@@ -72,15 +78,4 @@ class ArgParser:
                             shutil.rmtree(element, ignore_errors=True)
             exit()
 
-        dock, rank, parametrize, build, calculate, selection, amber, launch, batch, exclude, prt, ligands, poses = \
-            args.dock, args.rank, args.parameterize, args.build, args.calculatescore, args.selection, args.amber, args.launchOpenmm, args.batch, args.exclude, args.prt, args.ligands, args.poses
-        if selection:
-            joinedSel = ' '.join(args.selection)
-        else:
-            joinedSel = None
-
-        if args.md:
-            parametrize, build, calculate, launch = True, True, True, True
-        return dock, rank, parametrize, build, calculate, joinedSel, amber, launch, batch, exclude, args.consider, prt, args.membraneRestraints, args.boxsize, ligands, poses
-
-
+        return vars(args)

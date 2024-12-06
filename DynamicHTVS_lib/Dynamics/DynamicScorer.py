@@ -14,6 +14,7 @@ parameter_folder = path.join(script_dir, 'parameters')
 warnings.filterwarnings('ignore')
 
 cpu = int(cpu_count() / 4)
+ROOT_ = getcwd()
 
 
 def writePID():
@@ -29,7 +30,7 @@ def wrap(using_amber=False):
         ext = 'dcd' if any(file.endswith('dcd') for file in listdir('../')) else "xtc" if any(file.endswith('xtc') for file in listdir(
             '../')) else ''
         if ext == "":
-            print("No trajectory found in", getcwd())
+            print("No trajectory found in", ROOT_)
             return
         trajFile = [path.abspath(file) for file in listdir("../") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
@@ -75,8 +76,7 @@ def rmsd(ligName, amber_rmsd):
         u = MDAnalysis.Universe(PDB, XTC)
         ref = MDAnalysis.Universe("../../gbsa/complex.pdb") if not amber_rmsd else u
 
-        R = MDAnalysis.analysis.rms.RMSD(u, ref, select="protein and name CA",
-                                         groupselections=["resname %s and not name H*" % ligName])
+        R = MDAnalysis.analysis.rms.RMSD(u, ref, select="protein and name CA", groupselections=[f"resname {ligName} and not name H*"])
         R.run(start=0, step=10)
         r_rmsd = R.rmsd.T  # transpose makes it easier for plotting
         data = list(r_rmsd[3])
@@ -145,13 +145,11 @@ def csvTodat() -> list:
 
 def gbsa(_amber):
     GBSAs = []
-    chdir('../../gbsa')
+    chdir('../../gbsa') # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/post_Docks/deprotonated_palmitic_acid/3/gbsa
     try:
-        if 'gbsa.csv' not in listdir("../"):
-            print("AMBER CHECK:", _amber)
+        if 'gbsa.csv' not in listdir("./"):
             if _amber is False:
-                if "complex.prmtop" not in listdir("../") or "receptor.prmtop" not in listdir(
-                        "../") or "ligand.prmtop" not in listdir("../"):
+                if "complex.prmtop" not in listdir("./") or "receptor.prmtop" not in listdir("./") or "ligand.prmtop" not in listdir("./"):
                     systems = ['complex', 'receptor', 'ligand']
                     for i in systems:
                         getPRMTOP(system_=i)
@@ -160,7 +158,7 @@ def gbsa(_amber):
             command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
             with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
                 Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
-        if 'gbsa.dat' not in listdir('../'):
+        if 'gbsa.dat' not in listdir('./'):
             GBSAs = csvTodat()
             return GBSAs
         else:
@@ -206,21 +204,22 @@ def score(RMSDsFull, GBSAsFull):
 
 
 def getSummary(folder2analize, amber_):
+
     PATH_ = "DynamicScores"
     if amber_:
         PATH_ += "_amber"
     if path.exists(PATH_):
         system(f'rm {PATH_} -r')
     makedirs(PATH_, exist_ok=True)
-    logPath = f"{PATH_}/DynamicScores.log"
+    logPath = path.join(ROOT_, PATH_, "DynamicScores.log")
     LOG = open(logPath, 'a')
     for zincFolder, _, files in walk(folder2analize):
         if 'DES.txt' in files:
             scoreslog = Path('%s/DES.txt' % zincFolder)
-            print("GETTING DES SCORE FROM", scoreslog)
+            print("GETTING WDSF SCORE FROM", scoreslog)  # ok
             if scoreslog.is_file():
                 with open(scoreslog, 'r') as f:
-                    pathResult = path.abspath(zincFolder)
+                    pathResult = path.abspath(path.join(ROOT_, zincFolder))
                     for line in f:
                         LOG.write(pathResult + " " + line + "\n")
     LOG.close()
@@ -246,13 +245,12 @@ def main(m_amber):
     folder2analize = './post_Docks/' if not m_amber else './post_Docks_amber/'
     print("Folder to analyse ", folder2analize)
     writePID()
-    mothFolder = getcwd()
     processes = []
     with Pool(processes=cpu) as p:
         for productionFolder, _, files in walk(folder2analize):
             for file in files:
                 if file.startswith('Traj_') and file.endswith(('.dcd', '.xtc')):
-                    gbsa_process = p.apply_async(GBSAcalculatorWrapper, (productionFolder, mothFolder, amber,))
+                    gbsa_process = p.apply_async(GBSAcalculatorWrapper, (productionFolder, ROOT_, amber,))
                     processes.append(gbsa_process)
         for pro in processes:
             try:

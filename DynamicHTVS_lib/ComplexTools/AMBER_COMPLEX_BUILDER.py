@@ -10,33 +10,35 @@ def CreateComplex(folder) -> None:
     chdir(folder)
     makedirs('system', exist_ok=True)
     makedirs('gbsa', exist_ok=True)
-    molfile = [file for file in listdir("./") if file.endswith('.mol2')][0]
-    if path.exists(molfile) and path.exists("UNL.frcmod"):
-        RECEPTOR_PATH = path.abspath('../../../receptor/forGBSA.pdb')
-        # prepare the system for GBSA
-        Tleap.TleapLigand(mol2path=molfile, name="ligand")  # ligand prmtop
-        Tleap.TleapReceptor(recPdbPath=RECEPTOR_PATH, name="receptor")  # receptor prmtop
-        Tleap.TleapMakeGBSAComplex(recPdbPath=RECEPTOR_PATH, mol2path=molfile, name='GBSAcomplex')  # complex prmtop
+    makedirs('logs', exist_ok=True)
+    if not path.exists("./system/complex.inpcrd") or not path.exists("./system/complex.prmtop"):
+        molfile = [file for file in listdir("./") if file.endswith('.mol2')][0]
+        if path.exists(molfile) and path.exists("UNL.frcmod"):
+            RECEPTOR_PATH = path.abspath('../../../receptor/forGBSA.pdb')
+            # prepare the system for GBSA
+            Tleap.TleapLigand(mol2path=molfile, name="ligand")  # ligand prmtop
+            Tleap.TleapReceptor(recPdbPath=RECEPTOR_PATH, name="receptor")  # receptor prmtop
+            Tleap.TleapMakeGBSAComplex(recPdbPath=RECEPTOR_PATH, mol2path=molfile, name='GBSAcomplex')  # complex prmtop
 
-        # prepare now the system for cMD
-        # we merge the allAtoms with the ligand
-        Tleap.TleapMakeComplexCLASH(recPdbPath="../../../receptor/allAtoms.pdb", mol2path=molfile, name="solvate")
-        # then we remove clashes and make a new pdb
-        RemoveClashes()  # this takes clashed.pdb through VMD, remove clashes and writes complex_noClash.pdb
-        """
-        # numberWaters = run('grep "WAT" solvated.pdb | wc -l', shell=True, capture_output=True, text=True)
-        # output_string = int(numberWaters.stdout.strip())
-        # formula taken from https://computecanada.github.io/molmodsim-amber-md-lesson/12-Adding_Ions/index.html
-        # ionConc = (0.0028798 * output_string) // 2
-        # calculating the waters in the solvated complex
-        """
-        run("pdb4amber -i complex_noClash.pdb -o complex_tmp.pdb", shell=True, stdout=DEVNULL, stderr=DEVNULL)
-        run('grep -v "CONECT" complex_tmp.pdb > complex_final_NOCONECT.pdb', shell=True)
-        Tleap.TleapMakeComplexMD(complexNOCLASHpath="complex_final_NOCONECT.pdb", mol2path=molfile, name='MD')
-        # Tleap.TleapIonize(mol2path=molfile, complexPdbPath="solvated_noTER.pdb", conc=ionConc, name="complex")
-        makedirs('logs', exist_ok=True)
-        makedirs('temp_files', exist_ok=True)
-        run('mv *.err logs; mv *.out logs; mv *.log* logs; mv *renum* *nonprot* *sslink temp_files', shell=True)
+            # prepare now the system for cMD
+            # we merge the allAtoms with the ligand
+            Tleap.TleapMakeComplexCLASH(recPdbPath="../../../receptor/allAtoms.pdb", mol2path=molfile, name="solvate")
+
+            """
+            # then we remove clashes and make a new pdb
+            # RemoveClashes()  # this takes clashed.pdb through VMD, remove clashes and writes complex_noClash.pdb
+            # numberWaters = run('grep "WAT" solvated.pdb | wc -l', shell=True, capture_output=True, text=True)
+            # output_string = int(numberWaters.stdout.strip())
+            # formula taken from https://computecanada.github.io/molmodsim-amber-md-lesson/12-Adding_Ions/index.html
+            # ionConc = (0.0028798 * output_string) // 2
+            # calculating the waters in the solvated complex
+            # run("pdb4amber -i complex_noClash.pdb -o complex_tmp.pdb", shell=True, stdout=DEVNULL, stderr=DEVNULL)
+            # run('grep -v "CONECT" complex_tmp.pdb > complex_final_NOCONECT.pdb', shell=True)
+            """
+
+            Tleap.TleapMakeComplexMD(complexNOCLASHpath="clashed.pdb", mol2path=molfile, name='MD')
+            # Tleap.TleapIonize(mol2path=molfile, complexPdbPath="solvated_noTER.pdb", conc=ionConc, name="complex")
+            run('mv *.err logs; mv *.out logs; mv *.log* logs;', shell=True)
     chdir(cwd)
 
 

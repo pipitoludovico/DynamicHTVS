@@ -1,55 +1,58 @@
-mol load pdb complex.pdb
-proc contactFreq { {sel1} {sel2} {percent 0} {outFile stdout} {mol top} } {
+mol load pdb PLACEHOLDER_0
+
+proc contactFreq {sel1 sel2 outFile mol} {
+  set allCounts {}
+  set numberOfFrames [molinfo $mol get numframes]
+
   if { $outFile != "stdout" } {
      set outFile [open $outFile w]
   }
 
-  set allAtoms {}
-  set allCount {}
-  set numberOfFrames [molinfo $mol get numframes]
-  for { set i 0 } { $i < $numberOfFrames } { incr i } {
-      molinfo $mol set frame $i
+  for {set i 0} {$i < $numberOfFrames} {incr i} {
+    molinfo $mol set frame $i
 
-      set frameCount {}
-      set frameAtoms [atomselect $mol "$sel1 and noh and within 4 of ($sel2 and noh)"]
-      foreach {segid} [$frameAtoms get segid] {resname} [$frameAtoms get resname] {resid} [$frameAtoms get resid] {name} [$frameAtoms get name] {
-	  set atom [list $resid $resname $segid]
-	  if {[lsearch $frameCount $atom] != -1} continue
-	  lappend frameCount $atom
-	  set loc [lsearch $allAtoms $atom]
-          if { $loc == -1 } {
-             lappend allAtoms $atom
-             lappend allCount 1
-          } else {
-             lset allCount $loc [expr { [lindex $allCount $loc] + 1 } ]
-          }
-     }
-     $frameAtoms delete
-  }
+    set frameCount1 [atomselect $mol "$sel1 and noh and within 3.5 of ($sel2 and noh)"]
+    set frameCount2 [atomselect $mol "$sel2 and noh and within 3.5 of ($sel1 and noh)"]
 
-  #print count after sorting
-  set outData {}
-  foreach { a } $allAtoms { c } $allCount {
-      lappend outData [concat $c $a]
-  }
-foreach { data } [lsort -integer -index 1 $outData] {
-    set c [lindex $data 0]
-    set fraction [expr { 100*$c/($numberOfFrames+0.0) }]
-    if { $fraction >= $percent } {
-        append results [format "%s:%s " [lindex $data 2] [lindex $data 1]]
+    set uniqueContacts [list]
+
+    foreach a [$frameCount1 get {resname resid}] {
+      foreach b [$frameCount2 get {resname resid}] {
+        set contact [concat [lindex $a 0][lindex $a 1] "-" [lindex $b 0][lindex $b 1]]
+        if {[lsearch -exact $uniqueContacts $contact] == -1} {
+          lappend uniqueContacts $contact
+        }
+      }
     }
-}
 
-if { $results ne "" } {
-    puts $outFile $results
-}
+    set numContacts [llength $uniqueContacts]
 
+    lappend allCounts $numContacts
+
+    if { $outFile == "stdout" } {
+      puts "Frame $i $numContacts contacts"
+    } else {
+      set contactInfo {}
+      foreach contact $uniqueContacts {
+        lappend contactInfo [join $contact ""]
+      }
+      puts $outFile "$numContacts,[join $contactInfo ","]"
+    }
+
+    $frameCount1 delete
+    $frameCount2 delete
+  }
 
   if { $outFile != "stdout" } {
-      close $outFile
+    close $outFile
   }
-
 }
 
-contactFreq "protein" "resname UNL" "0" "contacts.int"
+set sel1 "PLACEHOLDER_1"
+set sel2 "PLACEHOLDER_2"
+set outName contacts.int
+
+
+contactFreq $sel1 $sel2 $outName top
+
 exit

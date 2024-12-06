@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 import os
 from time import perf_counter
-
-from DynamicHTVS_lib.Docking import DatabaseDocker, DockingRanker
-from DynamicHTVS_lib.CLI_Parser import ArgParser
-from DynamicHTVS_lib.Utilities import Utility
-
 import importlib.resources
 
-package_dir = str(importlib.resources.files('DynamicHTVS_lib'))
-OPENMM_SCRIPT_PATH = os.path.join(package_dir, 'openmm_pipeline_VS.py')
-Dynamic = os.path.join(package_dir, 'DynamicScorer.py')
+from DynamicHTVS_lib.CLI_Parser.Commands import *
+from DynamicHTVS_lib.Docking import DatabaseDocker, DockingRanker
+from DynamicHTVS_lib.Utilities import Utility
+from DynamicHTVS_lib.Dynamics.Plotter import DataPlotter
 
-ap = ArgParser.ArgParser()
-dock, rank, parametrize, build, calculate, selection, amber, launch, batch, exclude, consider, prt, membraneList, boxsize, ligands, poses = ap.argumentParser()
+package_dir = str(importlib.resources.files('DynamicHTVS_lib'))
+OPENMM_SCRIPT_PATH = os.path.join(package_dir, 'Dynamics/openmm_pipeline_VS.py')
+Dynamic = os.path.join(package_dir, 'Dynamics/DynamicScorer.py')
 
 
 def main():
@@ -26,18 +23,16 @@ def main():
 
     os.makedirs('logs', exist_ok=True)
     ROOT = os.getcwd()
-    if ligands:
-        ligandType, fullLigandPath = ligands[0], ligands[1]
-    else:
-        ligandType, fullLigandPath = None, None
+
     if dock:
         print("*" * 50)
         # Dock your database
-        if not selection:
+        if not selection_:
             print("Please add a selection using the -sel argument")
             exit()
-        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligandType, fullLigandPath, poses)
-        dbDocker.DockMols(selection)
+        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligands[0], ligands[1],
+                                                 poses)  # ligand[0] = type ligand[1] path
+        dbDocker.DockMols(selection_)
         print("\n\nDocking completed.")
         print("*" * 50)
     os.chdir(ROOT)
@@ -47,7 +42,7 @@ def main():
         print("Ranking results...")
         # Rank your results
         receptorPath = DatabaseDocker.DatabaseDocker(amber, boxsize).GetReceptorPath()
-        ranker = DockingRanker.DockingRanker()
+        ranker = DockingRanker.DockingRanker(restrict)
         ranker.ReadVinaScores()
         ranker.GetContacts(receptorPath)
         ranker.CreateSummaryChart()
@@ -56,16 +51,8 @@ def main():
         print("*" * 50)
     os.chdir(ROOT)
 
-    #  receptor
-    if amber:
-        import DynamicHTVS_lib.ReceptorTools.PrepareReceptor_AMBER
-        DynamicHTVS_lib.ReceptorTools.PrepareReceptor_AMBER.PrepareProtein()
-    else:
-        import DynamicHTVS_lib.ReceptorTools.PrepareReceptor_CHARMM
-        DynamicHTVS_lib.ReceptorTools.PrepareReceptor_CHARMM.PrepareProtein()
-
     #  ligands
-    if parametrize:
+    if parameterize:
         Result_Folders = Utility.FindAndMoveLigands(amber, consider)
         print("*" * 50)
         if amber:
@@ -80,6 +67,13 @@ def main():
 
     if build:
         Result_Folders = Utility.GetReultFolders(amber)
+        #  receptor
+        if amber:
+            import DynamicHTVS_lib.ReceptorTools.PrepareReceptor_AMBER
+            DynamicHTVS_lib.ReceptorTools.PrepareReceptor_AMBER.PrepareProtein()
+        else:
+            import DynamicHTVS_lib.ReceptorTools.PrepareReceptor_CHARMM
+            DynamicHTVS_lib.ReceptorTools.PrepareReceptor_CHARMM.PrepareProtein()
         print("@" * 50)
         print("Building systems...")
         if len(Result_Folders) == 0:
@@ -92,20 +86,25 @@ def main():
             from DynamicHTVS_lib.ComplexTools.CHARMM_COMPLEX_BUILDER import BuildCHARMMsystems
             BuildCHARMMsystems(Result_Folders)
 
-    if launch:
+    if launchOpenmm:
         Result_Folders = Utility.GetReultFolders(amber)
         from DynamicHTVS_lib.Runners.BUILD_AND_RUN import RunOpenMMbatches
-        RunOpenMMbatches(Result_Folders, OPENMM_SCRIPT_PATH, amber, batch, exclude, prt, membraneList)
+        RunOpenMMbatches(Result_Folders, OPENMM_SCRIPT_PATH, amber, batch, exclude, productionTime, membraneRestraints)
         print("\nMD completed")
 
     os.chdir(ROOT)
     # Calculate the Dynamic Score
-    if calculate:
+    if calculateScore:
         print("")
         print("#" * 50)
         print("Calculating Scores...")
         os.system(f'python {Dynamic} {amber}')
         print("Scoring completed")
+        print("Plotting...")
+        dp = DataPlotter(batch=consider)
+        dp.GetResults()
+        dp.ParallelRMSDs()
+        dp.PlotAll()
 
 
 if __name__ == "__main__":

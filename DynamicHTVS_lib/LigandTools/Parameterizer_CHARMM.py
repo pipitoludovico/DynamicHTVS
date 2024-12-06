@@ -209,7 +209,8 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
                         raise Exception('Parameterization with SilcBio and AnteChamber failed.')
     if all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
         for x in listdir("../"):
-            if x != getcwd():
+            p = path.abspath(x)
+            if p != f"./{x}":
                 run(f"cp -r *.top *.par ../{x}", shell=True)
     chdir(cwd)
 

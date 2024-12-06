@@ -3,7 +3,7 @@ from subprocess import run, CalledProcessError, DEVNULL
 
 def TleapLigand(mol2path: str, name: str) -> None:
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "set default PBRadii mbondi3",
 
          "loadamberparams UNL.frcmod",
@@ -18,7 +18,7 @@ def TleapLigand(mol2path: str, name: str) -> None:
 
 def TleapReceptor(recPdbPath: str, name: str) -> None:
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "set default PBRadii mbondi3",
 
          f'rec = loadpdb {recPdbPath}',
@@ -29,7 +29,7 @@ def TleapReceptor(recPdbPath: str, name: str) -> None:
 
 def TleapMakeGBSAComplex(recPdbPath: str, mol2path: str, name: str) -> None:
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "loadamberparams UNL.frcmod",
          "set default PBRadii mbondi3",
          f"UNL = loadmol2 {mol2path}",
@@ -44,7 +44,7 @@ def TleapMakeGBSAComplex(recPdbPath: str, mol2path: str, name: str) -> None:
 
 def TleapMakeComplexCLASH(recPdbPath: str, mol2path: str, name: str) -> None:
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "set default PBRadii mbondi3",
          "loadamberparams UNL.frcmod",
          f"UNL = loadmol2 {mol2path}",
@@ -59,7 +59,7 @@ def TleapMakeComplexCLASH(recPdbPath: str, mol2path: str, name: str) -> None:
 
 def TleapMakeComplexMD(complexNOCLASHpath: str, mol2path: str, name: str) -> None:
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "set default PBRadii mbondi3",
          "loadamberparams UNL.frcmod",
          f"UNL = loadmol2 {mol2path}",
@@ -67,7 +67,6 @@ def TleapMakeComplexMD(complexNOCLASHpath: str, mol2path: str, name: str) -> Non
          f"complex = loadpdb {complexNOCLASHpath}",
          'setBox complex "vdw"',
          "saveamberparm complex ./system/complex.prmtop ./system/complex.inpcrd",
-         "savepdb complex ./system/complex.pdb",
          "quit"]
     WriteTleap(_, name)
 
@@ -75,7 +74,7 @@ def TleapMakeComplexMD(complexNOCLASHpath: str, mol2path: str, name: str) -> Non
 def TleapIonize(mol2path, complexPdbPath, conc, name):
     """Deprecated"""
     _ = ["source leaprc.protein.ff19SB", "source leaprc.gaff2", "source leaprc.water.tip3p",
-         "source leaprc.lipid17",
+         "source leaprc.lipid21",
          "set default PBRadii mbondi3",
          "loadamberparams UNL.frcmod",
          f"UNL = loadmol2 {mol2path}",

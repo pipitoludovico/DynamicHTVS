@@ -18,6 +18,7 @@ class DatabaseDocker:
         self.database = None
         self.boxsize = str(boxsize)
         self.poses = poses
+        self.ROOT = os.getcwd()
         self.ligandType: str = ligandType
         self.ligandPath: str = ligandPath
         if self.ligandType == "smi":
@@ -25,18 +26,18 @@ class DatabaseDocker:
         self.dfList = []
         self.topPath = None
         self.trjPath = None
-        self.ROOT = os.getcwd()
         self.cpus = int(os.cpu_count() / 2)
 
     def CheckNecessaryFiles(self, amberCheck):
         try:
-            self.database = [file for file in os.listdir('../') if file.endswith('.smi')]
+            print("Checking ", self.ROOT, " for smi files.")
+            self.database = [file for file in os.listdir('./') if file.endswith('.smi')]
             if len(self.database) > 1:
                 print("More than one .smi file found. Please keep only the .smi file you want to use")
                 exit()
             else:
                 self.database = self.database[0]
-                print("DATABASE USED:", self.database)
+                print("Found:", self.database)
         except Exception as e:
             print(e)
             print("Database ending in .smi not found. Please provide a database ending in .smi with 'id' and 'smiles' columns")
@@ -83,15 +84,15 @@ class DatabaseDocker:
                 # writes allAtoms.pdb
                 LastFrameWriterAMBER(topPath=self.topPath, trjPath=self.trjPath)
                 Popen('cpptraj -i last_frame_getter.in > ./logs/last_frame_getter.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-                # writes protein_only.pdb
                 if os.path.exists('last_frame.pdb'):
                     Popen('pdb4amber -i allAtoms.pdb -o protein_only.pdb -p', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
                 # this writes forGBSA.pdb
                 LastFrameWriterAMBERforGBSA(topPath=self.topPath, trjPath=self.trjPath)
+                Popen('cpptraj -i forGBSA.in > ./logs/forGBSA.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
 
             # convert to pdbqt with obabel
             print("Converting the receptor with OpenBabel for docking...")
-            Popen("obabel -i pdb protein_only.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
+            Popen("obabel -i pdb forGBSA.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
             print("\n...completed.")
             # remove torsions due obabel faliures
             print("\nRemoving torsions and branches info from the pdbqt -> making receptor.pdbqt")
@@ -101,7 +102,7 @@ class DatabaseDocker:
             if FF == 'CHARMM':
                 Popen("mv receptor.* receptor; mv *.pdb *.psf receptor;", shell=True).wait()
             if FF == 'AMBER':
-                Popen("mv receptor.* receptor; mv *.pdb *.psf receptor; mv *.txt *_sslink *.in receptor;mv last_frame.pdb receptor; mv last_frame_getter.log logs", shell=True).wait()
+                Popen("mv receptor.* receptor; mv *.pdb receptor; mv  *.in receptor;", shell=True).wait()
 
         # calculating COM once
         COM = ['package require psfgen', 'package require pbctools',
@@ -195,6 +196,9 @@ class DatabaseDocker:
 
         os.makedirs('Docking_folder', exist_ok=True)
         x_coor, y_coor, z_coor = self.GetLastFrameReceptor(selection)
+        if any(coor is None for coor in (x_coor, y_coor, z_coor)):
+            print("No coordinates found for your docking selection.")
+            exit()
         print('Docking coordinates: ', x_coor, y_coor, z_coor)
 
         if self.ligandType == "smi":

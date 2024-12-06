@@ -18,6 +18,19 @@ except ImportError(GPUtil):
     subprocess.Popen('pip install GPUtil', shell=True)
 
 
+class ParseMembraneRestraints(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        membrane_list = []
+        if values:
+            for pair in values:
+                parts = pair.split(",")
+                if len(parts) == 2:
+                    membrane_list.append(parts)
+                else:
+                    raise argparse.ArgumentTypeError(f"{pair} is not in the correct RESNAME,ATOM format.")
+        setattr(namespace, self.dest, membrane_list)
+
+
 def getpid():
     mypid = os.getpid()
     pidFile = open(".mypid", "w")
@@ -159,11 +172,14 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
                                (p.name != protSel.split(",")[1] and p.residue.name in protResname)]
     membraneRes = []
     if membRestraints_:
-        for membSel in membRestraints_:
-            print('Adding restraints to:', membSel.split(',')[0], "name", membSel.split(",")[1])
+        for membSel in membRestraints:
             membraneRes += [p.index for p in top.topology.atoms() if
-                            (p.residue.name == membSel.split(",")[0] and p.name == membSel.split(",")[1])]
-            print("membraneres", membraneRes)
+                            (p.residue.name == membSel[0] and p.name == membSel[1])]
+    if membraneRes:
+        with open('restrainedMembraneIndexes.txt', 'w') as membOut:
+            for idx in membraneRes:
+                membOut.write(str(idx) + "\n")
+        print("Total membrane residues restrained: ", len(membraneRes))
     ligandRes = []
     if charmm and e_userPar is not None:
         print("CHARMM ligand Found. Adding restraints")
@@ -190,7 +206,9 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
         print("Adding restraints to the ligand")
     print("Number of restrained atoms:\n", len(restraintIndexes))
     ApplyRestraints(simulation_eq, restraintIndexes)
-    simulation_eq.reporters.append(app.StateDataReporter('equilibration.std', 1000, step=True, totalSteps=e_totalSteps, speed=True, remainingTime=True, potentialEnergy=True, kineticEnergy=True, temperature=True))
+    simulation_eq.reporters.append(
+        app.StateDataReporter('equilibration.std', 1000, step=True, totalSteps=e_totalSteps, speed=True,
+                              remainingTime=True, potentialEnergy=True, kineticEnergy=True, temperature=True))
     try:
         simulation_eq.reporters.append(app.XTCReporter('equilibration.xtc', eq_SaveF, enforcePeriodicBox=True))
     except:
@@ -223,7 +241,8 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     simulation_eq.context.setParameter('k', 0.1)  # safety measure
     simulation_eq.context.reinitialize(True)
     simulation_eq.step(remaining_prot)
-    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ', e_eqSteps)
+    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ',
+          e_eqSteps)
     simulation_eq.context.setParameter('k', 0)
     simulation_eq.reporters.append(app.CheckpointReporter('equilibration_checkpnt.chk', e_eqSteps))
     simulation_eq.step(e_eqSteps)
@@ -239,7 +258,8 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     simulation_eq.reporters.clear()
 
 
-def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU, m_number_of_steps, m_timeStep, p_saveF):
+def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU, m_number_of_steps,
+                        m_timeStep, p_saveF):
     os.makedirs(f"run_{p_replicas}", exist_ok=True)
     p_coords, p_top, charmm, params, gromacs = None, None, None, None, None
     platform = mm.Platform.getPlatformByName('CUDA')
@@ -281,11 +301,16 @@ def runOpenmmProduction(eq_coordinates, p_topology, p_userPar, p_userTop, p_repl
         params = app.CharmmParameterSet(*paramPATHS)
 
     if gromacs:
-        p_top = GromacsTopFile(p_topology, periodicBoxVectors=p_coords.getPeriodicBoxVectors(), includeDir='/usr/local/gromacs/share/gromacs/top')
+        p_top = GromacsTopFile(p_topology, periodicBoxVectors=p_coords.getPeriodicBoxVectors(),
+                               includeDir='/usr/local/gromacs/share/gromacs/top')
     if charmm:
-        system = p_top.createSystem(params, nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
+        system = p_top.createSystem(params, nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer,
+                                    switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True,
+                                    hydrogenMass=4 * amu)
     else:
-        system = p_top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer, switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True, hydrogenMass=4 * amu)
+        system = p_top.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.9 * nanometer,
+                                    switchDistance=0.75 * nanometer, constraints=HBonds, rigidWater=True,
+                                    hydrogenMass=4 * amu)
 
     simulation_production = Simulation(p_top.topology, system, integrator, platform, properties)
     simulation_production.loadState("equilibration_checkpnt.xml")
@@ -386,14 +411,14 @@ def restart(eq_coordinates, p_topology, p_userPar, p_userTop, p_replicas, p_GPU,
 def GetCoordinatesAndTopology():
     _coordinates, _topology = None, None
     if any(file_.endswith('.psf') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [pdb for pdb in os.listdir('../') if pdb.endswith('.pdb')][0]
-        _topology = [psf for psf in os.listdir('../') if psf.endswith('.psf')][0]
+        _coordinates = [pdb for pdb in os.listdir('./') if pdb.endswith('.pdb')][0]
+        _topology = [psf for psf in os.listdir('./') if psf.endswith('.psf')][0]
     if any(file_.endswith('.prmtop') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [inpcrd for inpcrd in os.listdir('../') if inpcrd.endswith('.inpcrd')][0]
-        _topology = [prmtop for prmtop in os.listdir('../') if prmtop.endswith('.prmtop')][0]
+        _coordinates = [inpcrd for inpcrd in os.listdir('./') if inpcrd.endswith('.inpcrd')][0]
+        _topology = [prmtop for prmtop in os.listdir('./') if prmtop.endswith('.prmtop')][0]
     if any(file_.endswith('.gro') for file_ in os.listdir(os.getcwd())):
-        _coordinates = [gro for gro in os.listdir('../') if gro.endswith('.gro')][0]
-        _topology = [groTOP for groTOP in os.listdir('../') if groTOP.endswith('.top')][0]
+        _coordinates = [gro for gro in os.listdir('./') if gro.endswith('.gro')][0]
+        _topology = [groTOP for groTOP in os.listdir('./') if groTOP.endswith('.top')][0]
     return _coordinates, _topology
 
 
@@ -420,8 +445,8 @@ ap.add_argument('-sv', '--savefreq', type=int, required=False,
                 help='set -sv to determine the save frequency for your dynamics in ps')
 ap.add_argument('-proteinRestraints', '--proteinRestraints', nargs='*', required=False, default=["is,CA", "not,H"],
                 help='defines which atoms of the proteins you want to restrain. The synthats is comma-separated. "not,H" or "is,CA". [Default = "is,CA"]')
-ap.add_argument('-membraneRestraints', '--membraneRestraints', nargs='*', required=False,
-                help='defines the RESNAME and the atom of the membrane you want to restrain. '
+ap.add_argument("-membraneRestraints", "--membraneRestraints", nargs="+", action=ParseMembraneRestraints,
+                help='defines the RESNAME and the atom of the membrane you want to restrain.'
                      '\nThe synthats is comma-separated. "POPE,P" or "POPE,P,POPC,P,POPE,N" for multiple selections. [Default = None]')
 ap.add_argument('-ligresname', '--ligresname', type=str, action='append', default=["UNL", "UNK"], required=False,
                 help=' set -ligresname UNK to identify your small molecule resname [Default = UNL, UNK]')
