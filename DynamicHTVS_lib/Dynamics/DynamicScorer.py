@@ -7,9 +7,10 @@ from pathlib import Path
 from multiprocessing import Pool
 from subprocess import Popen
 import warnings
+import importlib.resources
 
-script_dir = path.dirname(path.abspath(__file__))
-parameter_folder = path.join(script_dir, 'parameters')
+libdir = str(importlib.resources.files('DynamicHTVS_lib'))
+parameter_folder = path.join(libdir, "parameters")
 
 warnings.filterwarnings('ignore')
 
@@ -27,12 +28,11 @@ def writePID():
 def wrap(using_amber=False):
     # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/charmm/post_Docks/deprotonated_arachidonic_acid/system/run_1
     if "complex.dcd" not in listdir("../../gbsa"):
-        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('../')) else "xtc" if any(file.endswith('xtc') for file in listdir(
-            '../')) else ''
+        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(file.endswith('xtc') for file in listdir('./')) else ''
         if ext == "":
             print("No trajectory found in", ROOT_)
             return
-        trajFile = [path.abspath(file) for file in listdir("../") if file.endswith(ext) and file.startswith("Traj_")][0]
+        trajFile = [path.abspath(file) for file in listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
             membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
@@ -70,6 +70,7 @@ def wrap(using_amber=False):
 
 def rmsd(ligName, amber_rmsd):
     data = []
+    #/scratch/ludovico3/jenny/comparison/a10/vs/open/post_Docks/deprotonated_oleic_acid/3/system/run_1
     if "RMSDs.dat" not in listdir("../../gbsa"):
         PDB = "../../gbsa/complex.pdb" if not amber_rmsd else "../../gbsa/complex.prmtop"
         XTC = "../../gbsa/complex.dcd"
@@ -99,7 +100,7 @@ def getPRMTOP(system_=None):
             topFiles += f"-top {parameter_folder}/{file} "
         if file.endswith('par') or file.endswith('prm'):
             parFiles += f"-param {parameter_folder}/{file} "
-    lj_parameter = [CustomParFile for CustomParFile in listdir("../../") if CustomParFile.endswith("_LJ.par")][0]
+    lj_parameter = [CustomParFile for CustomParFile in listdir("../") if CustomParFile.endswith("_LJ.par")][0]
     parmed = open('parmed.inp', 'w')
     txt = ('chamber '
            f'{topFiles}'
@@ -145,11 +146,11 @@ def csvTodat() -> list:
 
 def gbsa(_amber):
     GBSAs = []
-    chdir('../../gbsa') # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/post_Docks/deprotonated_palmitic_acid/3/gbsa
+    chdir('../../gbsa')  # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/post_Docks/deprotonated_palmitic_acid/3/gbsa
     try:
         if 'gbsa.csv' not in listdir("./"):
             if _amber is False:
-                if "complex.prmtop" not in listdir("./") or "receptor.prmtop" not in listdir("./") or "ligand.prmtop" not in listdir("./"):
+                if any(not path.exists(file) for file in ('complex.prmtop', "receptor.prmtop", 'ligand.prmtop')):
                     systems = ['complex', 'receptor', 'ligand']
                     for i in systems:
                         getPRMTOP(system_=i)
@@ -162,13 +163,16 @@ def gbsa(_amber):
             GBSAs = csvTodat()
             return GBSAs
         else:
-            with open('gbsa.dat', 'r') as gbsaFile:
-                for gbsaline in gbsaFile:
-                    GBSAs.append(float(gbsaline))
-            return GBSAs
+            if path.getsize("gbsa.dat") != 0:
+                with open('gbsa.dat', 'r') as gbsaFile:
+                    for gbsaline in gbsaFile:
+                        GBSAs.append(float(gbsaline))
+                return GBSAs
+            else:
+                GBSAs = csvTodat()
+                return GBSAs
     except Exception as e:
-        print(
-            "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
+        print("GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
         print(repr(e))
         print("Using a default array")
         return [1, 1, 1, 1, 1]

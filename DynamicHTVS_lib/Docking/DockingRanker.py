@@ -13,7 +13,7 @@ class DockingRanker:
         self.restrictions: list = restrictions
         if not self.restrictions:
             self.restrictions = ['protein', 'resname UNL']
-        self.cpuCount: int = int(os.cpu_count() / 2)
+        self.cpuCount: int = int(os.cpu_count() / 4)
 
     def ReadVinaScoresWrapper(self, r_dock_folder) -> None:
         """Read the docking results and splits the poses"""
@@ -34,7 +34,7 @@ class DockingRanker:
                         resultSummary.close()
         except Exception as e:
             print(e)
-            print("\nDocking ligand ", r_dock_folder, "failed. Removing the folder.")
+            print("\nDocking ligand ", r_dock_folder, "failed.")
             os.chdir(self.ROOT)
             # Popen(f'rm -r ./Docking_folder/{r_dock_folder}', shell=True, stdout=DEVNULL).wait()
         os.chdir(self.ROOT)
@@ -46,73 +46,75 @@ class DockingRanker:
                 ScoreReadProcesses.append(p.apply_async(self.ReadVinaScoresWrapper, (dock_folder,)))
             for proc in ScoreReadProcesses:
                 proc.get()
+            p.close()
+            p.join()
 
     def GetContactsWrapper(self, folder, g_receptorPath):
         os.chdir(self.ROOT + "/Docking_folder/" + folder + "/analysis")
         poses = [pose for pose in os.listdir('./') if pose.endswith(".pdb") and "out_pose" in pose]
-        with open(poses[0], 'r') as poseFile:
-            resname = None
-            for line in poseFile.readlines():
-                if 'ATOM' in line or 'HETATM' in line:
-                    resname = line.split()[3]
-                    break
-        for idx, pose in enumerate(poses):
-            Popen(f'grep "ATOM" {g_receptorPath} > tempComplex.pdb', shell=True).wait()
-            Popen(f'grep "ATOM" {pose} >> tempComplex.pdb', shell=True).wait()
-            #  adding segid and chain X
-            nameForContact: str = f"complex_pose{idx}.pdb"
-            g_complex = open(nameForContact, 'w')
-            with open('tempComplex.pdb', 'r') as _:
-                for r_line in _.readlines():
-                    if resname in r_line:
-                        g_complex.write(r_line[0:22] + "X" + r_line[23:74] + "X" + r_line[73:-1] + "\n")
+        try:
+            with open(poses[0], 'r') as poseFile:
+                resname = None
+                for line in poseFile.readlines():
+                    if 'ATOM' in line or 'HETATM' in line:
+                        resname = line.split()[3]
+                        break
+            for idx, pose in enumerate(poses):
+                Popen(f'grep "ATOM" {g_receptorPath} > tempComplex.pdb', shell=True).wait()
+                Popen(f'grep "ATOM" {pose} >> tempComplex.pdb', shell=True).wait()
+                #  adding segid and chain X
+                nameForContact: str = f"complex_pose{idx}.pdb"
+                g_complex = open(nameForContact, 'w')
+                with open('tempComplex.pdb', 'r') as _:
+                    for r_line in _.readlines():
+                        if resname in r_line:
+                            g_complex.write(r_line[0:22] + "X" + r_line[23:74] + "X" + r_line[73:-1] + "\n")
+                        else:
+                            g_complex.write(r_line)
+                g_complex.close()
+                tcl_script_path = os.path.join(self.package_dir, 'VMD', 'getContacts.tcl')
+                #  We now copy the tcl script for counting the contacts
+                Popen(f"cp {tcl_script_path} .", shell=True).wait()
+                Popen(f"sed -i 's/PLACEHOLDER_0/{nameForContact}/g' getContacts.tcl", shell=True).wait()
+                Popen(f"sed -i 's/PLACEHOLDER_1/{self.restrictions[0]}/g' getContacts.tcl", shell=True).wait()
+                Popen(f"sed -i 's/PLACEHOLDER_2/{self.restrictions[1]}/g' getContacts.tcl", shell=True).wait()
+                Popen(f'vmd -dispdev text -e getContacts.tcl', shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
+                with open(f"contacts.int", 'r') as poseContacts:
+                    contact_content = poseContacts.read()
+                    numContacts = int(contact_content.split(",")[0])
+                    if numContacts > 0:
+                        Popen(f'cat contacts.int >> {folder}_{idx+1}.txt', shell=True).wait()
                     else:
-                        g_complex.write(r_line)
-            g_complex.close()
-            tcl_script_path = os.path.join(self.package_dir, 'VMD', 'getContacts.tcl')
-            #  We now copy the tcl script for counting the contacts
-            Popen(f"cp {tcl_script_path} .", shell=True).wait()
-            Popen(f"sed -i 's/PLACEHOLDER_0/{nameForContact}/g' getContacts.tcl", shell=True).wait()
-            Popen(f"sed -i 's/PLACEHOLDER_1/{self.restrictions[0]}/g' getContacts.tcl", shell=True).wait()
-            Popen(f"sed -i 's/PLACEHOLDER_2/{self.restrictions[1]}/g' getContacts.tcl", shell=True).wait()
-            Popen(f'vmd -dispdev text -e getContacts.tcl', shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
-            with open(f"contacts.int", 'r') as poseContacts:
-                contact_content = poseContacts.read()
-                numContacts = int(contact_content.split(",")[0])
-                print("posa", pose, contact_content, numContacts)
-                if numContacts > 0:
-                    print(pose, folder)  # deprotonated_arachidonic_acid_out_pose1.pdb, depro_arach_acid
-                    Popen(f'cat contacts.int >> {folder}_{idx+1}.txt', shell=True).wait()
-                else:
-                    Popen(f'rm {folder}_{idx+1}.txt', shell=True).wait()
-        Popen(f'cat *.txt > {folder}_summary.con', shell=True).wait()
-        Popen('rm tempComplex.pdb', shell=True).wait()
+                        Popen(f'rm {folder}_{idx+1}.txt', shell=True).wait()
+            Popen(f'cat *.txt > {folder}_summary.con', shell=True).wait()
+            Popen('rm tempComplex.pdb', shell=True).wait()
+            os.chdir(self.ROOT)
+        except Exception as e:
+            print("Ligand ", folder, "did not produce results.", e)
         os.chdir(self.ROOT)
 
     def GetContacts(self, g_receptorPath: str) -> None:
         g_docking_folders = [g_docking_f for g_docking_f in os.listdir('Docking_folder')]
+
         for i in range(0, len(g_docking_folders), self.cpuCount):
-            subGroup = (g_docking_folders[i:i + self.cpuCount])
-            GetContacsProcesses = []
-            for folder in subGroup:
-                with closing(Pool(processes=self.cpuCount)) as p:
-                    GetContacsProcesses.append(p.apply_async(self.GetContactsWrapper, (folder, g_receptorPath,)))
-            for proc in GetContacsProcesses:
-                try:
-                    proc.get(timeout=600)
-                except TimeoutError:
-                    continue
-            p.join()
-            print("Batch ", i, "in progress...")
-            GetContacsProcesses.clear()
+            subGroup = g_docking_folders[i:i + self.cpuCount]
+            with closing(Pool(processes=self.cpuCount)) as pool:
+                tasks = [pool.apply_async(self.GetContactsWrapper, (folder, g_receptorPath)) for folder in subGroup]
+                for task, folder in zip(tasks, subGroup):
+                    try:
+                        task.get(timeout=600)
+                    except Exception as e:
+                        print(f"{folder} took too long", e)
+                        continue
+                pool.close()
+                pool.join()
 
     def CreateSummaryChart(self):
         if os.path.exists('Summary_chart.txt'):
             Popen("rm Summary_chart.txt", shell=True)
         Popen("touch Summary_chart.txt", shell=True)
         for cs_DockFoler in os.listdir("./Docking_folder"):
-            Popen(f"cat {self.ROOT}/Docking_folder/{cs_DockFoler}/analysis/{cs_DockFoler}_summary.con >> Summary_chart.txt",
-                shell=True).wait()
+            Popen(f"cat {self.ROOT}/Docking_folder/{cs_DockFoler}/analysis/{cs_DockFoler}_summary.con >> Summary_chart.txt", shell=True).wait()
 
     def SortSummary(self, consider) -> None:
         for s_file in os.listdir(self.ROOT):

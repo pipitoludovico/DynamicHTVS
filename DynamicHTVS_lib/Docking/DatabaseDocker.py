@@ -26,7 +26,7 @@ class DatabaseDocker:
         self.dfList = []
         self.topPath = None
         self.trjPath = None
-        self.cpus = int(os.cpu_count() / 2)
+        self.cpus = int(os.cpu_count() / 4)
 
     def CheckNecessaryFiles(self, amberCheck):
         try:
@@ -188,7 +188,7 @@ class DatabaseDocker:
         os.chdir("./Docking_folder/" + d_folder)
         ligand_pdbqt = d_folder + ".pdbqt"
         Popen(f'obabel -i pdb {d_folder}.pdb -o pdbqt -O {ligand_pdbqt} -xn -xh --partialcharge mmff94', stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
-        Popen(f"qvina2 --center_x {x_coor} --center_y {y_coor} --center_z {z_coor} --size_x {self.boxsize} --size_y {self.boxsize} --size_z {self.boxsize} --receptor {self.ROOT}/receptor/receptor.pdbqt --ligand {ligand_pdbqt} --exhaustiveness 32 --num_modes {self.poses} --out {d_folder}_out.pdbqt", stdout=DEVNULL, stderr=PIPE, shell=True).wait()
+        Popen(f"qvina2 --center_x {x_coor} --center_y {y_coor} --center_z {z_coor} --size_x {self.boxsize} --size_y {self.boxsize} --size_z {self.boxsize} --receptor {self.ROOT}/receptor/receptor.pdbqt --ligand {ligand_pdbqt} --cpu {self.cpus - 2} --exhaustiveness 8 --num_modes {self.poses}  --out {d_folder}_out.pdbqt", stdout=DEVNULL, stderr=PIPE, shell=True).wait()
         os.chdir(self.ROOT)
 
     def DockMols(self, selection):
@@ -211,7 +211,8 @@ class DatabaseDocker:
                 makedirs(newFolderName, exist_ok=True)
                 copy2(os.path.join(self.ligandPath, file), newFolderName)
         if self.ligandType == 'pdb':
-            newFolderName = f"Docking_folder/{self.ligandPath.split('.')[0]}"
+            singlePDBname = str(self.ligandPath).split("/")[-1].split(".")[0]
+            newFolderName = f"Docking_folder/{singlePDBname}"
             makedirs(newFolderName, exist_ok=True)
             copy2(os.path.abspath(self.ligandPath), newFolderName)
 
@@ -222,8 +223,8 @@ class DatabaseDocker:
                 DockProcesses.append(p.apply_async(self.DockWrapper, (folder, x_coor, y_coor, z_coor,)))
             for proc in DockProcesses:
                 proc.get()
-        p.close()
-        p.join()
+            p.close()
+            p.join()
 
     def GetReceptorPath(self):
         """Returns the path of the receptor."""

@@ -73,9 +73,14 @@ def ParameterizeLigands(pdbPath, folder) -> None:
         except CalledProcessError:
             print("X" * 50)
             print(f"antechamber failed with charge {formal_charge} ", pdbPath, ". It will try now again assuming a formal charge of 0 and spin 1.")
+    if not path.exists("UNL.frcmod"):
+        try:
             run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc 0 -rn UNL -at gaff2 -pl -1", shell=True, stdout=anteOut, stderr=anteErr)
             run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
             chdir(cwd)
+        except Exception as e:
+            print("Tried with charge 0 and failed. Check if the structure is valid.")
+            print(e)
     # we copy the coordinates of the different poses but import the atom types and bonds of the parameterized mol2
     # I know... very unelegant. But it works.
     if path.exists("UNL.frcmod"):

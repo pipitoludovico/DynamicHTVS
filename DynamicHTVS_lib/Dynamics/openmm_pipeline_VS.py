@@ -68,7 +68,6 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     coords, top, charmm, params, amber, gromacs, ligand, proteinCA, membranePOPC, membranePOPE = None, None, None, None, None, None, None, None, None, None
     m_integrator = mm.LangevinMiddleIntegrator(310 * kelvin, 1 / picosecond, 0.002 * picoseconds)
     platform = mm.Platform.getPlatformByName('CUDA')
-    # properties = {'DeviceIndex': f'{str(e_availableIDs)}', 'Precision': 'mixed'}
     properties = {'DeviceIndex': str(e_availableIDs), 'Precision': 'mixed'}
     print('Running thermalization for ', e_protSteps)
     print('Running NPT equilibration for  ', e_eqSteps)
@@ -201,7 +200,7 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     if proteinRes:
         print("Adding restraints to the protein")
     if membraneRes:
-        print("Adding restraints to the selected membrane residues/atoms", membraneRes)
+        print("Adding restraints to the selected membrane residues/atoms")
     if ligandRes:
         print("Adding restraints to the ligand")
     print("Number of restrained atoms:\n", len(restraintIndexes))

@@ -73,7 +73,6 @@ def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membran
                         if previousTraj.endswith("dcd"):
                             Popen(f"rm *.dcd ./run*/*.dcd", shell=True).wait()
             Popen(command, shell=True).wait()
-            print("SPOTTED", command, getcwd())
             CheckIfCompleted()
         else:
             print("There is a hidden tagfile called .dontrestart in", _fol,

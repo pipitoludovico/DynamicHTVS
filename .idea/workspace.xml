@@ -6,20 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/CLI_Parser/ArgParser.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/CLI_Parser/ArgParser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/openmm_pipeline_VS.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/openmm_pipeline_VS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Tleap.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Utilities/Utility.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Utilities/Utility.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/VMD/getContacts.tcl" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/VMD/getContacts.tcl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VirtualScreener.py" beforeDir="false" afterPath="$PROJECT_DIR$/VirtualScreener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,7 +61,7 @@
     &quot;Python.asd.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/ludovico/PycharmProjects/Cheminformatics/DynamicHTVS&quot;
+    &quot;last_opened_file_path&quot;: &quot;/home/ludovico/PycharmProjects/Cheminformatics/ML_rdkit&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -204,7 +197,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-d7ad00fb9fc3-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.23726.102" />
+        <option value="bundled-python-sdk-6a3326d57233-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.24807.21" />
       </set>
     </attachedChunks>
   </component>

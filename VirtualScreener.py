@@ -13,6 +13,7 @@ OPENMM_SCRIPT_PATH = os.path.join(package_dir, 'Dynamics/openmm_pipeline_VS.py')
 Dynamic = os.path.join(package_dir, 'Dynamics/DynamicScorer.py')
 
 
+
 def main():
     print("\n")
     print("*" * 50)
@@ -30,8 +31,7 @@ def main():
         if not selection_:
             print("Please add a selection using the -sel argument")
             exit()
-        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligands[0], ligands[1],
-                                                 poses)  # ligand[0] = type ligand[1] path
+        dbDocker = DatabaseDocker.DatabaseDocker(amber, boxsize, ligands[0], ligands[1], poses)  # ligand[0] = type ligand[1] path
         dbDocker.DockMols(selection_)
         print("\n\nDocking completed.")
         print("*" * 50)
