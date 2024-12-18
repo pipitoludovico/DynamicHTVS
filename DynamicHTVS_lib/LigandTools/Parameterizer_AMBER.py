@@ -16,7 +16,7 @@ def MakeMol2(pdbPath, folder) -> None:
         run(f"sed -i '/^ATOM/!d' {pdbPath}", shell=True)
         if not path.exists(".already_parameterized"):
             if not path.exists(molOutName) or stat(molOutName) != 0:
-                run(f'obabel -i pdb {pdbPath} -o mol2 -O {molOutName}; touch .already_parameterized;', stdout=DEVNULL, stderr=DEVNULL, shell=True)
+                run(f'obabel -i pdb {pdbPath} -o mol2 -O {molOutName}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
     except Exception as e:
         print("An error occurred during the parameterization of: ", pdbPath, e)
         chdir(cwd)
@@ -58,32 +58,27 @@ def SwapCoordinates(template, destination):
 def ParameterizeLigands(pdbPath, folder) -> None:
     chdir(folder)  # post_Dock_amber/ligand/1
     molOutName = str(pdbPath).replace('.pdb', '.mol2')
+    formal_charge = 0
     if not (path.exists('sqm.out') or path.exists("logs/sqm.out")):
         try:
             mol_for_charge = Chem.MolFromMol2File(str(molOutName))
             formal_charge = Chem.GetFormalCharge(mol_for_charge)
         except Exception as e:
-            print(repr(e))
-            mol_for_charge = Chem.MolFromMol2File(str(molOutName) + "_backup")
-            formal_charge = Chem.GetFormalCharge(mol_for_charge)
+            print(f"Couldn't determine the formal charge for {pdbPath}, {repr(e)}. Assuming 0 charge.\n")
+    if not path.exists("UNL.frcmod"):
         try:
             with open('antechamber.out', 'w') as anteOut, open('antechamber.err', 'w') as anteErr:
                 run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc {formal_charge} -rn UNL -at gaff2 -pl -1", shell=True, stdout=anteOut, stderr=anteErr)
-                run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
-        except CalledProcessError:
-            print("X" * 50)
-            print(f"antechamber failed with charge {formal_charge} ", pdbPath, ". It will try now again assuming a formal charge of 0 and spin 1.")
-    if not path.exists("UNL.frcmod"):
-        try:
+                run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2;", shell=True, stdout=anteOut, stderr=anteErr)
+        except CalledProcessError as e:
             run(f"antechamber -i {pdbPath} -fi pdb -o {molOutName} -fo mol2 -s 0 -c bcc -nc 0 -rn UNL -at gaff2 -pl -1", shell=True, stdout=anteOut, stderr=anteErr)
             run(f"parmchk2 -i {molOutName} -f mol2 -o UNL.frcmod -s gaff2", shell=True, stdout=anteOut, stderr=anteErr)
-            chdir(cwd)
-        except Exception as e:
-            print("Tried with charge 0 and failed. Check if the structure is valid.")
+            print("Antechamber tried with charge 0 and failed. Check if the structure is valid.")
             print(e)
     # we copy the coordinates of the different poses but import the atom types and bonds of the parameterized mol2
     # I know... very unelegant. But it works.
     if path.exists("UNL.frcmod"):
+        run("touch .already_parameterized", shell=True)
         # we get pose1.mol2 as a template
         templateMOL2 = [path.join(".", mol2) for mol2 in listdir(".") if mol2.endswith(".mol2") and "pose" in mol2][0]
         this = getcwd()

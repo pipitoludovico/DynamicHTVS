@@ -179,7 +179,7 @@ class DatabaseDocker:
                 mol = Chem.AddHs(mol)
                 AllChem.EmbedMolecule(mol, randomSeed=42)
                 path = f"Docking_folder/{row[p_idColName]}/{row[p_idColName]}.pdb"
-                AllChem.MolToPDBFile(mol, path)
+                AllChem.MolToPDBFile(mol, path, flavor=4)
 
     def DockWrapper(self, d_folder, x_coor, y_coor, z_coor) -> None:
         """Finds the autodock Vina config file that will be used for the parallel dockings.

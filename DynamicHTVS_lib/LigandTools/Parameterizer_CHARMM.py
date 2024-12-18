@@ -206,7 +206,7 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
                         BuildLJ()
                         CreateLigandPsf()
                     else:
-                        raise Exception('Parameterization with SilcBio and AnteChamber failed.')
+                        print('Parameterization with SilcBio and AnteChamber failed.')
     if all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
         for x in listdir("../"):
             p = path.abspath(x)

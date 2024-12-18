@@ -79,8 +79,8 @@ def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membran
                   "/system. Remove it if you want to restart your simulation.")
             print("WARNING: if you choose so, you will overwrite your previous results!")
     else:
-        with open('failed.txt', 'a') as failed:
-            Popen(f'mv {_fol} Failed', shell=True).wait()
+        with open(f'{cwd}/FailedDynamics.txt', 'a') as failed:
+            Popen(f'mv {_fol} {cwd}/Failed', shell=True).wait()
             failed.write(_fol + "\n")
         chdir(cwd)
     chdir(cwd)
@@ -99,7 +99,7 @@ def RunOpenMMbatches(ligandFolders, SCRIPT_PATH, amber, batch, exclude, prt, mem
             ALL.append(f"{ligand}/{pose}")
     groupedPostDockMainLigandFolders = [ALL[i:i + batch] for i in range(0, len(ALL), batch)]
     print("#" * 200)
-    print("Running OpenMM", amber)
+    print("Running OpenMM")
     with Pool(processes=batch) as p:
         count = 0
         for poses in groupedPostDockMainLigandFolders:

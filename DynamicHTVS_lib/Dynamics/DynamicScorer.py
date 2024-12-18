@@ -26,6 +26,7 @@ def writePID():
 
 
 def wrap(using_amber=False):
+    print("WRAPPING AND FILTERING IN ", getcwd())
     # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/charmm/post_Docks/deprotonated_arachidonic_acid/system/run_1
     if "complex.dcd" not in listdir("../../gbsa"):
         ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(file.endswith('xtc') for file in listdir('./')) else ''
@@ -46,7 +47,7 @@ def wrap(using_amber=False):
                f'mol new ../structure.psf type psf\n' if not using_amber else 'mol new ../complex.prmtop type parm7\n',
                f'mol addfile ../structure.pdb type pdb\n' if not using_amber else "",
                f'mol addfile {trajFile} type {ext} first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all\n',
-               f'set sel [atomselect top "protein or resname {allMembRes} or resname UNL"]\n',
+               f'set sel [atomselect top "not (water or ions)"]\n',
                'proc align { rmolid smolid2 seltext } {\n',
                '  set ref [atomselect 0 $seltext frame 0]\n',
                '  set sel [atomselect $smolid2 $seltext]\n',
@@ -95,11 +96,14 @@ def rmsd(ligName, amber_rmsd):
 def getPRMTOP(system_=None):
     topFiles = ""
     parFiles = ""
+    print(str(parameter_folder))
     for file in listdir(str(parameter_folder)):
-        if file.endswith("rtf") or file.endswith('str'):
+        if file.endswith("rtf"):
             topFiles += f"-top {parameter_folder}/{file} "
         if file.endswith('par') or file.endswith('prm'):
             parFiles += f"-param {parameter_folder}/{file} "
+        if file.endswith('str'):
+            parFiles += f"-str {parameter_folder}/{file} "
     lj_parameter = [CustomParFile for CustomParFile in listdir("../") if CustomParFile.endswith("_LJ.par")][0]
     parmed = open('parmed.inp', 'w')
     txt = ('chamber '

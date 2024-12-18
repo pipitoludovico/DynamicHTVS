@@ -6,11 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/AMBER_COMPLEX_BUILDER.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/openmm_pipeline_VS.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/openmm_pipeline_VS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_CHARMM.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/VirtualScreener.py" beforeDir="false" afterPath="$PROJECT_DIR$/VirtualScreener.py" afterDir="false" />
     </list>

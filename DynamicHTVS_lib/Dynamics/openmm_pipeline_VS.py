@@ -240,8 +240,7 @@ def runOpenmmEquilibration(eq_coordinates, eq_topology, e_availableIDs, e_userPa
     simulation_eq.context.setParameter('k', 0.1)  # safety measure
     simulation_eq.context.reinitialize(True)
     simulation_eq.step(remaining_prot)
-    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ',
-          e_eqSteps)
+    print('\nThermalization completed. Equilibrating NPT with k=0 every: ', eq_SaveF, 'steps. Equilibrating for: ', e_eqSteps)
     simulation_eq.context.setParameter('k', 0)
     simulation_eq.reporters.append(app.CheckpointReporter('equilibration_checkpnt.chk', e_eqSteps))
     simulation_eq.step(e_eqSteps)
