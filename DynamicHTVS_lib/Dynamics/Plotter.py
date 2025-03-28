@@ -14,9 +14,15 @@ class DataPlotter:
     def __init__(self, batch):
         self.ROOT: str = getcwd()
         self.batch: int = batch
-        self.DynamicPath: str = [path.join(self.ROOT, folder) for folder in listdir(self.ROOT) if "Dynamic" in folder][0]
+        self.DynamicPath: str = [path.join(self.ROOT, folder) for folder in listdir(self.ROOT) if "DynamicScores" in folder][0]
         self.AMBER = True if "amber" in self.DynamicPath else False
-        self.resultTxt = [path.join(self.DynamicPath, textFile) for textFile in listdir(self.DynamicPath) if 'sorted' in textFile][0]
+        self.resultTxt = [path.join(self.DynamicPath, textFile) for textFile in listdir(self.DynamicPath) if
+                          'sorted' in textFile]
+        if len(self.resultTxt) != 1:
+            print("no sorted_DEX.txt in DynamicScores folders")
+            exit()
+        else:
+            self.resultTxt = self.resultTxt[0]
         self.resultsPaths: list = []
         self.sharedDict = {}
 
@@ -28,27 +34,26 @@ class DataPlotter:
                     _.append(line.split("/")[-3])
                     self.resultsPaths.append(line.split()[0])
 
-    def GetFullRMSD(self, PATH: str):
-        PDB = f"{PATH}/complex.pdb" if not self.AMBER else f"{PATH}/complex.prmtop"
-        XTC = f"{PATH}/complex.dcd"
-        key = PATH.split("/")[-3]
+    def GetFullRMSD(self, PATH_locale: str):
+        PDB = f"{PATH_locale}/complex.pdb" if not self.AMBER else f"{PATH_locale}/complex.prmtop"
+        XTC = f"{PATH_locale}/complex.dcd"
+        key = PATH_locale.split("/")[-3]
         u = Mda.Universe(PDB, XTC)
-        ref = Mda.Universe(f"{PATH}/complex.pdb") if not self.AMBER else u
+        ref = Mda.Universe(f"{PATH_locale}/complex.pdb") if not self.AMBER else u
 
-        R = Mda.analysis.rms.RMSD(u, ref, select="protein and name CA",
-                                  groupselections=[f"resname UNL and not name H*"])
+        R = Mda.analysis.rms.RMSD(u, ref, select="protein and name CA", groupselections=[f"resname UNL and not name H*"])
         R.run(start=0)
         r_rmsd = R.results.rmsd.T
         self.sharedDict[key] = list(r_rmsd[3])
 
     def ParallelRMSDs(self):
-        self.GetResults()
         processes = []
-        with Pool(processes=8) as p:
+        with Pool() as p:
             for gbsa in self.resultsPaths:
                 processes.append(p.apply_async(self.GetFullRMSD, (gbsa,)))
             for proc in processes:
                 proc.get()
+        p.join()
 
     def PlotAll(self):
         makedirs("RMSDS", exist_ok=True)
@@ -69,3 +74,4 @@ class DataPlotter:
             plt.title("Comparative Stability Analysis")
             plt.legend()
             plt.savefig(f"RMSDS/RMSD_batch_{count}.png", dpi=300)
+            count += 1

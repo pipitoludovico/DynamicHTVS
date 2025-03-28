@@ -23,7 +23,7 @@ def TleapReceptor(recPdbPath: str, name: str) -> None:
 
          f'rec = loadpdb {recPdbPath}',
          "saveamberparm rec ./gbsa/receptor.prmtop ./gbsa/receptor.inpcrd",
-         "savepdb rec ./gbsa/ligand.pdb", "quit"]
+         "savepdb rec ./gbsa/receptor.pdb", "quit"]
     WriteTleap(_, name)
 
 
@@ -51,7 +51,6 @@ def TleapMakeComplexCLASH(recPdbPath: str, mol2path: str, name: str) -> None:
          "check UNL",
          f"rec = loadpdb {recPdbPath}",
          "complex = combine{rec UNL}",
-         'setBox complex "vdw"',
          'setBox complex "vdw"',
          "savepdb complex ./clashed.pdb", "quit"]
     WriteTleap(_, name)

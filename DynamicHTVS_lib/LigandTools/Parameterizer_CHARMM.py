@@ -170,6 +170,7 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
     check = True
     # building the initial .mol2 file
     if not path.exists(mol2):
+        print("Building the mol2 ", mol2)
         run(f'obabel -i pdb {renamed_file} -o mol2 -O {mol2}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
     # using the mol2 file to generate a rough .str file
     if any(not path.exists(topFile) for topFile in ('strfile.str', 'new_file_char.top')):
@@ -180,15 +181,17 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
         return
     if not all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
         try:
+            print("Building the top and par files.")
             run(f'obabel -i pdb {initialPDBinPOSTdocks} -o mol2 -O {mol2}', stdout=DEVNULL, stderr=DEVNULL, shell=True)
             mol_for_charge = Chem.MolFromMol2File(f"{mol2}")
             charge = Chem.GetFormalCharge(mol_for_charge)
         except Exception as e:
             print("Molecule ", molID, " failed. Turnin off sanitization. Check the results are they might be wrong or unphysical!")
             print(repr(e))
-            mol_for_charge = Chem.MolFromPDBFile(f"{initialPDBinPOSTdocks}.pdb", sanitize=False)
+            mol_for_charge = Chem.MolFromPDBFile(f"{initialPDBinPOSTdocks}", sanitize=False)
             charge = Chem.GetFormalCharge(mol_for_charge)
         if not path.exists('gau_input.gau'):
+            print(f"CHARGE for {initialPDBinPOSTdocks} = {charge}")
             WriteGaussian(initialPDBinPOSTdocks, charge)  # gau_input.gau, gau_chk.chk
     if not path.exists('gau_input.log'):  # if gaussian was not completed
         try:

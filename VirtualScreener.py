@@ -2,15 +2,21 @@
 import os
 from time import perf_counter
 import importlib.resources
+import signal
 
 from DynamicHTVS_lib.CLI_Parser.Commands import *
 from DynamicHTVS_lib.Docking import DatabaseDocker, DockingRanker
-from DynamicHTVS_lib.Utilities import Utility
+from DynamicHTVS_lib.Utilities.Utility import *
 from DynamicHTVS_lib.Dynamics.Plotter import DataPlotter
 
 package_dir = str(importlib.resources.files('DynamicHTVS_lib'))
-OPENMM_SCRIPT_PATH = os.path.join(package_dir, 'Dynamics/openmm_pipeline_VS.py')
+pipeline_dir = str(importlib.resources.files('openMM_SOP'))
+OPENMM_SCRIPT_PATH = os.path.join(pipeline_dir, 'openMM.py')
+
 Dynamic = os.path.join(package_dir, 'Dynamics/DynamicScorer.py')
+
+signal.signal(signal.SIGINT, signal_handler)  # Handles Ctrl + C, should that happen
+signal.signal(signal.SIGTERM, signal_handler)  # Handle pkill or kill...
 print("PACKAGE DIR", package_dir, Dynamic)
 
 
@@ -54,7 +60,7 @@ def main():
 
     #  ligands
     if parameterize:
-        Result_Folders = Utility.FindAndMoveLigands(amber, consider)
+        Result_Folders = FindAndMoveLigands(amber, consider)
         print("*" * 50)
         if amber:
             print("Building AMBER Ligand Parameters\n\n")
@@ -67,7 +73,7 @@ def main():
         print("\nParameterization completed.")
 
     if build:
-        Result_Folders = Utility.GetReultFolders(amber)
+        Result_Folders = GetReultFolders(amber)
         #  receptor
         if amber:
             import DynamicHTVS_lib.ReceptorTools.PrepareReceptor_AMBER
@@ -88,7 +94,7 @@ def main():
             BuildCHARMMsystems(Result_Folders)
 
     if launchOpenmm:
-        Result_Folders = Utility.GetReultFolders(amber)
+        Result_Folders = GetReultFolders(amber)
         from DynamicHTVS_lib.Runners.BUILD_AND_RUN import RunOpenMMbatches
         RunOpenMMbatches(Result_Folders, OPENMM_SCRIPT_PATH, amber, batch, exclude, productionTime, membraneRestraints)
         print("\nMD completed")
@@ -109,8 +115,35 @@ def main():
 
 
 if __name__ == "__main__":
-    start = perf_counter()
-    main()
-    end = perf_counter()
-    final = end - start
-    print("The process took: ", final)
+    lock_created = False
+    try:
+        if os.path.exists(LOCK_FILE):
+            with open(LOCK_FILE, "r") as lock:
+                try:
+                    old_pid = int(lock.read().strip())
+                    if is_process_running(old_pid):
+                        print(f"Error: Another instance (PID {old_pid}) is already running.")
+                        exit(1)
+                    else:
+                        print(f"Old lock file found (PID {old_pid}). Overwriting...")
+                except ValueError:
+                    print("Corrupted lock file. Overwriting...")
+
+        # Create a new lock file
+        with open(LOCK_FILE, "w") as lock:
+            lock.write(str(os.getpid()))
+        lock_created = True  # Mark as successfully created
+
+        start = perf_counter()
+        main()
+        end = perf_counter()
+        print("The process took:", end - start)
+    except PermissionError:
+        print(f"Error: Cannot write lock file at {LOCK_FILE}. Check permissions.")
+        exit(1)
+
+    except RuntimeError:
+        print("Runtime error occurred.")
+    finally:
+        if lock_created and os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)

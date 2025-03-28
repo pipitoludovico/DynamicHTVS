@@ -71,7 +71,7 @@ class DatabaseDocker:
             raise FileNotFoundError("It was not possible to determine the FF style. No topology found.")
         # check if protein is not ready for docking and extract the last frame according to the FF
         os.makedirs('receptor', exist_ok=True)
-        if not os.path.exists('./receptor/system.pdbqt'):
+        if not os.path.exists('./receptor/receptor.pdbqt'):
             print("\nGetting the last frame...")
             # we need 3 systems:
             if FF == 'CHARMM':
@@ -83,16 +83,21 @@ class DatabaseDocker:
             if FF == 'AMBER':
                 # writes allAtoms.pdb
                 LastFrameWriterAMBER(topPath=self.topPath, trjPath=self.trjPath)
+                # runs cpptraj to make allAtoms.pdb
                 Popen('cpptraj -i last_frame_getter.in > ./logs/last_frame_getter.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-                if os.path.exists('last_frame.pdb'):
-                    Popen('pdb4amber -i allAtoms.pdb -o protein_only.pdb -p', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+                if os.path.exists('allAtoms.pdb'):
+                    # this takes allAtoms and extracts the protein for docking
+                    Popen('pdb4amber -i allAtoms.pdb -o withIons.pdb -d; grep -v "+" withIons.pdb | grep -v "-" > forDocking.pdb ', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+                else:
+                    print("could not run cpptraj to extract the last frame!")
+                    exit()
                 # this writes forGBSA.pdb
                 LastFrameWriterAMBERforGBSA(topPath=self.topPath, trjPath=self.trjPath)
                 Popen('cpptraj -i forGBSA.in > ./logs/forGBSA.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
 
             # convert to pdbqt with obabel
             print("Converting the receptor with OpenBabel for docking...")
-            Popen("obabel -i pdb forGBSA.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
+            Popen("obabel -i pdb forDocking.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
             print("\n...completed.")
             # remove torsions due obabel faliures
             print("\nRemoving torsions and branches info from the pdbqt -> making receptor.pdbqt")
@@ -100,13 +105,13 @@ class DatabaseDocker:
             # move the receptor.pdbqt to receptor folder as well as system
             print('Cleaning folders...')
             if FF == 'CHARMM':
-                Popen("mv receptor.* receptor; mv *.pdb *.psf receptor;", shell=True).wait()
+                Popen("mv *.pdb *.psf *.pdbqt receptor;", shell=True).wait()
             if FF == 'AMBER':
-                Popen("mv receptor.* receptor; mv *.pdb receptor; mv  *.in receptor;", shell=True).wait()
+                Popen("mv receptor.* protein_* receptor; mv *.pdb receptor; mv  *.in receptor;", shell=True).wait()
 
         # calculating COM once
         COM = ['package require psfgen', 'package require pbctools',
-               f'resetpsf\nmol new {self.ROOT}/receptor/allAtoms.pdb type pdb',
+               f'resetpsf\nmol new {self.ROOT}/receptor/forDocking.pdb type pdb',
                f'set sel [atomselect top "{selection}"]',
                'set geo [measure center $sel]', 'puts "GEO $geo"', 'quit']
         vmdin = Popen(['/usr/local/bin/vmd'], stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True)

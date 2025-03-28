@@ -1,4 +1,5 @@
-from os import getcwd, listdir, path, getpid, cpu_count, system, chdir, makedirs, walk
+import os.path
+from os import getcwd, listdir, path, getpid, system, chdir, makedirs, walk
 import sys
 import MDAnalysis
 import MDAnalysis.analysis.rms
@@ -14,7 +15,7 @@ parameter_folder = path.join(libdir, "parameters")
 
 warnings.filterwarnings('ignore')
 
-cpu = int(cpu_count() / 4)
+cpu = 4
 ROOT_ = getcwd()
 
 
@@ -26,28 +27,30 @@ def writePID():
 
 
 def wrap(using_amber=False):
-    print("WRAPPING AND FILTERING IN ", getcwd())
     # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/charmm/post_Docks/deprotonated_arachidonic_acid/system/run_1
     if "complex.dcd" not in listdir("../../gbsa"):
-        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(file.endswith('xtc') for file in listdir('./')) else ''
+        ext = 'dcd' if any(file.endswith('dcd') for file in listdir('./')) else "xtc" if any(
+            file.endswith('xtc') for file in listdir('./')) else ''
         if ext == "":
             print("No trajectory found in", ROOT_)
             return
         trajFile = [path.abspath(file) for file in listdir("./") if file.endswith(ext) and file.startswith("Traj_")][0]
         if using_amber:
-            membraneResnames = ('PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
+            membraneResnames = (
+                'PA', 'ST', 'OL', 'LEO', 'LEN', 'AR', 'DHA', 'PC', 'PE', 'PS', 'PH', 'P2', 'PGR', 'PGS', 'PI', 'CHL')
         else:
-            membraneResnames = ("POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL",
-                                "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
-                                "SOPC", "DPPE", "LLPE", "SOPE", "DPPA", "LLPA", "SOPA", "DPPI", "LLPI", "LLPS",
-                                "DPPG", "DGDG", "CMH", "SITO", "STIG", "CAMP")
+            membraneResnames = (
+                "POPC", "PLPC", "PAPE", "POPE", "POPI", "PAPS", "POPA", "SSM", "NSM", "CMH", "CHOL", "CHL1",
+                "DYPC", "YOPC", "PYPE", "YOPE", "POPS", "YOPA", "ERG", "MIPC", "DPPC", "LLPC",
+                "SOPC", "DPPE", "LLPE", "SOPE", "DPPA", "LLPA", "SOPA", "DPPI", "LLPI", "LLPS",
+                "DPPG", "DGDG", "CMH", "SITO", "STIG", "CAMP")
         allMembRes = " ".join(membraneResnames)
 
         txt = ['package require psfgen\n', 'package require pbctools\n', 'resetpsf\n',
                f'mol new ../structure.psf type psf\n' if not using_amber else 'mol new ../complex.prmtop type parm7\n',
                f'mol addfile ../structure.pdb type pdb\n' if not using_amber else "",
                f'mol addfile {trajFile} type {ext} first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all\n',
-               f'set sel [atomselect top "not (water or ions)"]\n',
+               f'set sel [atomselect top "protein or resname UNL {allMembRes}"]\n',
                'proc align { rmolid smolid2 seltext } {\n',
                '  set ref [atomselect 0 $seltext frame 0]\n',
                '  set sel [atomselect $smolid2 $seltext]\n',
@@ -71,26 +74,28 @@ def wrap(using_amber=False):
 
 def rmsd(ligName, amber_rmsd):
     data = []
-    #/scratch/ludovico3/jenny/comparison/a10/vs/open/post_Docks/deprotonated_oleic_acid/3/system/run_1
-    if "RMSDs.dat" not in listdir("../../gbsa"):
-        PDB = "../../gbsa/complex.pdb" if not amber_rmsd else "../../gbsa/complex.prmtop"
-        XTC = "../../gbsa/complex.dcd"
-        u = MDAnalysis.Universe(PDB, XTC)
-        ref = MDAnalysis.Universe("../../gbsa/complex.pdb") if not amber_rmsd else u
+    PDB = "../../gbsa/complex.pdb" if not amber_rmsd else "../../gbsa/complex.prmtop"
+    XTC = "../../gbsa/complex.dcd"
+    if os.path.exists(XTC):
+        #  /scratch/ludovico3/jenny/comparison/a10/vs/open/post_Docks/deprotonated_oleic_acid/3/system/run_1
+        if "RMSDs.dat" not in listdir("../../gbsa"):
+            u = MDAnalysis.Universe(PDB, XTC)
+            ref = MDAnalysis.Universe("../../gbsa/complex.pdb") if not amber_rmsd else u
 
-        R = MDAnalysis.analysis.rms.RMSD(u, ref, select="protein and name CA", groupselections=[f"resname {ligName} and not name H*"])
-        R.run(start=0, step=10)
-        r_rmsd = R.rmsd.T  # transpose makes it easier for plotting
-        data = list(r_rmsd[3])
+            R = MDAnalysis.analysis.rms.RMSD(u, ref, select="protein and name CA",
+                                             groupselections=[f"resname {ligName} and not name H*"])
+            R.run(start=0, step=10)
+            r_rmsd = R.rmsd.T  # transpose makes it easier for plotting
+            data = list(r_rmsd[3])
 
-        with open('../../gbsa/RMSDs.dat', 'w') as rmsdFile:
-            for dat in data:
-                rmsdFile.write(str(dat) + "\n")
-    else:
-        with open('../../gbsa/RMSDs.dat', 'r') as rmsdFile:
-            for line in rmsdFile:
-                data.append(float(line))
-    return data
+            with open('../../gbsa/RMSDs.dat', 'w') as rmsdFile:
+                for dat in data:
+                    rmsdFile.write(str(dat) + "\n")
+        else:
+            with open('../../gbsa/RMSDs.dat', 'r') as rmsdFile:
+                for line in rmsdFile:
+                    data.append(float(line))
+        return data
 
 
 def getPRMTOP(system_=None):
@@ -150,16 +155,19 @@ def csvTodat() -> list:
 
 def gbsa(_amber):
     GBSAs = []
-    chdir('../../gbsa')  # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/post_Docks/deprotonated_palmitic_acid/3/gbsa
+    chdir(
+        '../../gbsa')  # /scratch/ludovico3/jenny/comparison/l1/vs/crystal/post_Docks/deprotonated_palmitic_acid/3/gbsa
     try:
         if 'gbsa.csv' not in listdir("./"):
             if _amber is False:
+                print("AMBERCHECK= ", _amber)
                 if any(not path.exists(file) for file in ('complex.prmtop', "receptor.prmtop", 'ligand.prmtop')):
                     systems = ['complex', 'receptor', 'ligand']
                     for i in systems:
+                        print(f"Converting {i} with parmed.\n")
                         getPRMTOP(system_=i)
             write_pbsa_in()
-            amberPATH = "$AMBERHOME/bin/MMPBSA.py"
+            amberPATH = "MMPBSA.py"
             command = f'{amberPATH} -i mmgbsa.in -o results_mmgbsa.dat -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop -y complex.dcd -eo gbsa.csv'
             with open('gbsa.out', 'w') as stdout_file, open('gbsa.err', 'w') as stderr_file:
                 Popen(command, shell=True, stdout=stdout_file, stderr=stderr_file).wait()
@@ -176,7 +184,8 @@ def gbsa(_amber):
                 GBSAs = csvTodat()
                 return GBSAs
     except Exception as e:
-        print("GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
+        print(
+            "GBSA calculation did not complete. Please inspect your gbsa input files, complex, receptor and ligand files for errors.\n\n")
         print(repr(e))
         print("Using a default array")
         return [1, 1, 1, 1, 1]
@@ -184,8 +193,8 @@ def gbsa(_amber):
 
 def score(RMSDsFull, GBSAsFull):
     if len(RMSDsFull) > 1 and len(GBSAsFull) > 1:
-        RMSDs = RMSDsFull[1:]
-        GBSAs = GBSAsFull[1:]
+        RMSDs = RMSDsFull[2:]
+        GBSAs = GBSAsFull[2:]
         scores = [i / j for i, j in zip(GBSAs, RMSDs)]
         nframes = len(scores)
 
@@ -212,7 +221,6 @@ def score(RMSDsFull, GBSAsFull):
 
 
 def getSummary(folder2analize, amber_):
-
     PATH_ = "DynamicScores"
     if amber_:
         PATH_ += "_amber"
@@ -264,8 +272,7 @@ def main(m_amber):
             try:
                 pro.get()
             except Exception as e:
-                print(f"GBSA timedout for: {processes.index(pro)}")
-                print(e)
+                print(f"{e}\n")
                 print("Pool will try to complete the remaining processes.")
     getSummary(folder2analize, amber)
 

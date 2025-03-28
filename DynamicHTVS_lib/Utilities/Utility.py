@@ -1,5 +1,7 @@
-from os import makedirs, path, listdir
+from os import makedirs, path, listdir, kill, remove
 from subprocess import Popen
+
+LOCK_FILE = "/scratch/.VirtualScreener.lock"
 
 
 def GetReultFolders(amber) -> list:
@@ -85,13 +87,16 @@ def LastFrameWriterCHARMM(topPath: str, trjPath: str) -> None:
         "package require pbctools\n"
         # 'pbc unwrap\n'
         'set final [atomselect top "not (water or ions)" frame last]\n',
-        f'set membr [atomselect top "{" ".join(membraneResnames)}"]"\n',
+        f'set membr [atomselect top resname "{" ".join(membraneResnames)}"]\n',
         '$membr set resid [$membr get residue]\n',
         'set all [atomselect top "all" frame last]\n',
-        'set protein [atomselect top "protein" frame last]\n',
+        f'set protein [atomselect top "protein or resname {" ".join(membraneResnames)}" frame last]\n',
 
         '$protein writepdb protein_only.pdb\n'
         '$protein writepsf protein_only.psf\n',
+
+        '$protein writepdb forDocking.pdb\n'
+        '$protein writepsf forDocking.psf\n',
 
         "$final writepdb forGBSA.pdb\n",
         "$final writepsf forGBSA.psf\n",
@@ -124,3 +129,24 @@ def LastFrameWriterAMBERforGBSA(topPath: str, trjPath: str) -> None:
     with open('forGBSA.in', 'w') as trajinFile:
         for line in trajin_:
             trajinFile.write(line + "\n")
+
+
+def is_process_running(pid):
+    """Check if a process is running by PID."""
+    try:
+        kill(pid, 0)  # No signal sent, just a check
+        return True
+    except OSError:
+        return False
+
+
+def cleanup():
+    """Remove the lock file on exit."""
+    if path.exists(LOCK_FILE):
+        remove(LOCK_FILE)
+        print("Lock file removed.")
+
+
+def signal_handler(signum, frame):
+    cleanup()
+    exit(1)
