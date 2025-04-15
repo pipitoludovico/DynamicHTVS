@@ -86,7 +86,8 @@ class DockingRanker:
                         Popen(f'cat contacts.int >> {folder}_{idx+1}.txt', shell=True).wait()
                     else:
                         Popen(f'rm {folder}_{idx+1}.txt', shell=True).wait()
-            Popen(f'cat *.txt > {folder}_summary.con', shell=True).wait()
+            if any(os.path.exists(textFile) for textFile in os.listdir("./") if textFile.endswith("txt")):
+                Popen(f'cat *.txt > {folder}_summary.con', shell=True).wait()
             Popen('rm tempComplex.pdb', shell=True).wait()
             os.chdir(self.ROOT)
         except Exception as e:

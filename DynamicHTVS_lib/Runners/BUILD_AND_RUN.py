@@ -55,35 +55,33 @@ def CheckIfCompleted():
 def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membraneList) -> None:
     """Runs the openmm pipeline inside the folder, equilibrating and producing a trajectory."""
     chdir(_fol + "/system")
+    makedirs("extraTopPar", exist_ok=True)
+    toppar_files = ["./extraTopPar/new_file_char.top", "./extraTopPar/combined_pars.par"]
+
     if (path.exists('structure.psf') and path.exists('structure.pdb')) or (path.exists('complex.prmtop') and path.exists('complex.inpcrd')):
         membraneL = f"-memb -membraneRestraints {''.join(membraneList)}" if membraneList else "-cyt -proteinRestraints"
         exclusion = "-e " + " ".join(excluded) + " " if excluded else ""
         if path.exists('all.pdb'):
             Popen("rm all.*;rm ligand*;rm solvated*;", shell=True)
-        if not path.exists("new_file_char.top") and not amber:
-            Popen("cp ../new_file_char.top .", shell=True)
-            #openMM.py -et 1 -prt 10 -cyt -GPU 1 -proteinRestraints -eq -run
+        if not any(path.exists(f) for f in toppar_files) and not amber:
+            Popen("cp ../new_file_char.top ./extraTopPar; cp ./combined_pars.par ./extraTopPar", shell=True).wait()
         command = f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -et 1 -prt {prt} {membraneL} -GPU {r_gpu}  -eq -run -FEP > openmm.log 2>&1' if amber else \
-            f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -up ./combined_pars.par -ut ./new_file_char.top -et 1 -prt {prt} {membraneL} -GPU {r_gpu} -in 4 -eq -run -FEP> openmm.log 2>&1'
-        # command = f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -pt 3 -et 1 -prt {prt} {membraneL} -gpu {r_gpu} -in 4 -eq EQ -run RUN > openmm.log 2>&1' if amber else f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -up ./combined_pars.par -ut ./new_file_char.top -pt 3 -et 1 -prt {prt} {membraneL} -gpu {r_gpu} -in 4 -eq EQ -run RUN > openmm.log 2>&1'
+            f'python -u {OPENMM_SCRIPT_PATH} {exclusion} -et 1 -prt {prt} {membraneL} -GPU {r_gpu} -eq -run -FEP > openmm.log 2>&1'
         if not path.exists('.dontrestart'):
-            if path.exists("./run_1"):
-                if any(path.exists(old) for old in os.listdir("./run_1") if old.endswith(("xtc", "dcd"))):
+            runFolders = [name for name in os.listdir(".") if name.startswith("run")]
+            for oldRun in runFolders:
+                if path.exists(oldRun):
                     print("Cleaning previous unfinished trajectories in ", _fol)
-                    for previousTraj in listdir('./'):
-                        if previousTraj.endswith("xtc"):
-                            Popen(f"rm *.xtc ./run*/*.xtc", shell=True).wait()
-                        if previousTraj.endswith("dcd"):
-                            Popen(f"rm *.dcd ./run*/*.dcd", shell=True).wait()
+                    Popen(f"rm -r {oldRun}", shell=True).wait()
             Popen(command, shell=True).wait()
             CheckIfCompleted()
         else:
+            chdir(cwd)
             print("There is a hidden tagfile called .dontrestart in", _fol,
                   "/system. Remove it if you want to restart your simulation.")
             print("WARNING: if you choose so, you will overwrite your previous results!")
     else:
         with open(f'{cwd}/FailedDynamics.txt', 'a') as failed:
-            Popen(f'mv {_fol} {cwd}/Failed', shell=True).wait()
             failed.write(_fol + "\n")
         chdir(cwd)
     chdir(cwd)
@@ -102,16 +100,14 @@ def RunOpenMMbatches(ligandFolders, SCRIPT_PATH, amber, batch, exclude, prt, mem
             ALL.append(f"{ligand}/{pose}")
     groupedPostDockMainLigandFolders = [ALL[i:i + batch] for i in range(0, len(ALL), batch)]
     print("#" * 200)
-    print("Running OpenMM")
     with Pool(processes=batch) as p:
         count = 0
         for poses in groupedPostDockMainLigandFolders:
             ComplexProcesses = []
             for pose in poses:
                 idx_GPU = GPUlist[count % len(GPUlist)]
-                print(pose, "runs on gpu", idx_GPU)
-                ComplexProcesses.append(
-                    p.apply_async(RunnerWrapper, (pose, idx_GPU, SCRIPT_PATH, amber, exclude, prt, membraneList)))
+                print(f"Running {SCRIPT_PATH} with GPU {idx_GPU} in {pose}")
+                ComplexProcesses.append(p.apply_async(RunnerWrapper, (pose, idx_GPU, SCRIPT_PATH, amber, exclude, prt, membraneList)))
                 count += 1
             for complexProc in ComplexProcesses:
                 try:

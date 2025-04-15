@@ -113,7 +113,7 @@ def getPRMTOP(system_=None):
     parmed = open('parmed.inp', 'w')
     txt = ('chamber '
            f'{topFiles}'
-           '-top  ../system/new_file_char.top '
+           '-top  ../system/extraTopPar/new_file_char.top '
            f'{parFiles}'
            f'-param ../{lj_parameter} '
            f'-psf %s.psf '

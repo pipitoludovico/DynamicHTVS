@@ -54,7 +54,7 @@ def CreateComplex(_workingFolder) -> None:
             ['package require psfgen\n', 'package require solvate\n',
              'readpsf ./system/all.psf\n', 'coordpdb ./system/all.pdb\n',
              "solvate ./system/all.psf ./system/all.pdb -b 2.4 -t {} -o ./system/solvated\n".format(
-                 "12" if not membrane else "0"),
+                 "15" if not membrane else "0"),
              'exit\n'],
             ['package require autoionize\n',
              'autoionize -psf ./system/solvated.psf -pdb ./system/solvated.pdb -o ./system/structure -sc 0.154\n',
