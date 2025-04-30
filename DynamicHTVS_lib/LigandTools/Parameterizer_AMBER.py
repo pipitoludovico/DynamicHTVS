@@ -62,7 +62,7 @@ def SwapCoordinates(template, destination):
 def ParameterizeLigands(pdbPath, folder) -> None:
     chdir(folder)  # post_Dock_amber/ligand/1
     molOutName = str(pdbPath).replace('.pdb', '.mol2')
-    molName = str(pdbPath).replace('.pdb', 'mol')
+    molName = str(pdbPath).replace('.pdb', '.mol')
 
     formal_charge = 0
     try:
@@ -70,6 +70,9 @@ def ParameterizeLigands(pdbPath, folder) -> None:
         import psi4
         import pandas as pd
         from collections import defaultdict
+        psi4.set_output_file('mylog.out', False)
+        psi4.core.IOManager.shared_object().set_default_path('/tmp')
+        psi4.set_options({'save_jk': False})
 
         def addRESP(inpfile, outfile, molecule_df_):
             with open(inpfile, 'r') as fr:
@@ -102,18 +105,18 @@ def ParameterizeLigands(pdbPath, folder) -> None:
         psi4.core.be_quiet()
         pk = Psikit()
         pk.read_from_molfile(molName)
-        pk.optimize('HF/6-31g(d)')
+        pk.optimize('HF/6-311g(d)')
         respCharges = pk.calc_resp_charges()
         for i, atom in enumerate(pk.mol.GetAtoms()):
             res['SYMBOL'].append(atom.GetSymbol())
             res['RESP'].append(respCharges[i])
         molecule_df = pd.DataFrame(res)
         addRESP(molOutName, 'tmpRESP.mol2', molecule_df)
-        antechamber = "antechamber -i tmpRESP.mol2 -fi mol2 -o RESP.mol2 -fo mol2 -at amber -pf yes"
+        antechamber = "antechamber -i tmpRESP.mol2 -fi mol2 -o RESP.mol2 -fo mol2 -at amber -pf yes -dr no"
         call(antechamber.split(), stdout=DEVNULL, stderr=DEVNULL)
         parmchk = "parmchk2 -i RESP.mol2 -f mol2 -o UNL.frcmod"
         call(parmchk.split(), stdout=DEVNULL, stderr=DEVNULL)
-    except RespOptimizationError:
+    except:
         print("Caught RESP optimization error. psikit failed. Using BCC charges instead.")
         if not (path.exists('sqm.out') or path.exists("logs/sqm.out")):
             try:

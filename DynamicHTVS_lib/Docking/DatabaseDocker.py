@@ -87,7 +87,7 @@ class DatabaseDocker:
                 Popen('cpptraj -i last_frame_getter.in > ./logs/last_frame_getter.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
                 if os.path.exists('allAtoms.pdb'):
                     # this takes allAtoms and extracts the protein for docking
-                    Popen('pdb4amber -i allAtoms.pdb -o withIons.pdb -d; grep -v "+" withIons.pdb | grep -v "-" > forDocking.pdb ', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+                    Popen("""awk '($1 == "ATOM" || $1 == "HETATM") && $3 !~ /[+-]/ && $4 !~ /[+-]/' withIons.pdb > forDocking.pdb""",shell=True).wait()
                 else:
                     print("could not run cpptraj to extract the last frame!")
                     exit()

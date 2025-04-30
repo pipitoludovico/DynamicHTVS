@@ -1,4 +1,5 @@
 from rdkit import Chem
+from rdkit.Chem.SaltRemover import SaltRemover
 
 
 class SmilesCleaner:
@@ -6,12 +7,14 @@ class SmilesCleaner:
         self.smiles = smiles
         self.molObjs = []
         self.canonicalSmiles = []
+        self.remover = SaltRemover()
 
     def getCanonicalSmiles(self):
         try:
             self.molObjs = [Chem.MolFromSmiles(smi) for smi in self.smiles]
             for mol in self.molObjs:
                 Chem.RemoveStereochemistry(mol)
+                self.remover.StripMol(mol)
             self.canonicalSmiles = [Chem.MolToSmiles(mol) for mol in self.molObjs]
 
         except Exception as e:

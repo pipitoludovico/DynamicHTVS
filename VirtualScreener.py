@@ -2,6 +2,7 @@
 import os
 from time import perf_counter
 import importlib.resources
+import importlib.util
 import signal
 
 from DynamicHTVS_lib.CLI_Parser.Commands import *
@@ -10,8 +11,14 @@ from DynamicHTVS_lib.Utilities.Utility import *
 from DynamicHTVS_lib.Dynamics.Plotter import DataPlotter
 
 package_dir = str(importlib.resources.files('DynamicHTVS_lib'))
-pipeline_dir = str(importlib.resources.files('openMM_SOP'))
-OPENMM_SCRIPT_PATH = os.path.join(pipeline_dir, 'openMM.py')
+
+package_name = "openMM_SOP"
+spec = importlib.util.find_spec(package_name)
+if spec is None:
+    raise ModuleNotFoundError(f"{package_name} not installed!")
+package_path = spec.submodule_search_locations[0]  # Path to package directory
+
+OPENMM_SCRIPT_PATH = f"{package_path}/openMM.py"
 
 Dynamic = os.path.join(package_dir, 'Dynamics/DynamicScorer.py')
 

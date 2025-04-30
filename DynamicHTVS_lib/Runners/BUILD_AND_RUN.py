@@ -59,7 +59,7 @@ def RunnerWrapper(_fol, r_gpu, OPENMM_SCRIPT_PATH, amber, excluded, prt, membran
     toppar_files = ["./extraTopPar/new_file_char.top", "./extraTopPar/combined_pars.par"]
 
     if (path.exists('structure.psf') and path.exists('structure.pdb')) or (path.exists('complex.prmtop') and path.exists('complex.inpcrd')):
-        membraneL = f"-memb -membraneRestraints {''.join(membraneList)}" if membraneList else "-cyt -proteinRestraints"
+        membraneL = f"-memb -membraneRestraints {''.join(membraneList)}" if membraneList else "-cyt -proteinRestraints is,CA"
         exclusion = "-e " + " ".join(excluded) + " " if excluded else ""
         if path.exists('all.pdb'):
             Popen("rm all.*;rm ligand*;rm solvated*;", shell=True)

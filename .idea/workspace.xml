@@ -6,14 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/CHARMM_COMPLEX_BUILDER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/ComplexTools/CHARMM_COMPLEX_BUILDER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/openMM_SOP/lib/FEP/Alchemical.py" beforeDir="false" afterPath="$PROJECT_DIR$/openMM_SOP/lib/FEP/Alchemical.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/openMM_SOP/lib/builder/systemBuilder.py" beforeDir="false" afterPath="$PROJECT_DIR$/openMM_SOP/lib/builder/systemBuilder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/openMM_SOP/lib/parser/Parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/openMM_SOP/lib/parser/Parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/openMM_SOP/lib/runner/production.py" beforeDir="false" afterPath="$PROJECT_DIR$/openMM_SOP/lib/runner/production.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/VirtualScreener.py" beforeDir="false" afterPath="$PROJECT_DIR$/VirtualScreener.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,7 +43,7 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="2gdJsnaUIjB7UQr9U1xUHhLv70l" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="1" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -63,7 +60,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/ludovico/0_Test_Area/pdbbind&quot;
+    &quot;last_opened_file_path&quot;: &quot;/home/ludovico/PycharmProjects/DynamicHTVS&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -199,7 +196,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-4f4e415b4190-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.26053.29" />
+        <option value="bundled-python-sdk-348a24fa61fa-5312c7369657-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.23774.444" />
       </set>
     </attachedChunks>
   </component>

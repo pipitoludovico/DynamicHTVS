@@ -151,6 +151,7 @@ def csvTodat() -> list:
         return data
     except FileNotFoundError:
         print("No gbsa.csv found. Check if your GBSA analysis went well.")
+        return [0,]
 
 
 def gbsa(_amber):
