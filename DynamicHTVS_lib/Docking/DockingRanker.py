@@ -3,6 +3,7 @@ from contextlib import closing
 import os
 from multiprocessing import Pool
 import importlib.resources
+import re
 
 
 class DockingRanker:
@@ -53,42 +54,32 @@ class DockingRanker:
         os.chdir(self.ROOT + "/Docking_folder/" + folder + "/analysis")
         poses = [pose for pose in os.listdir('./') if pose.endswith(".pdb") and "out_pose" in pose]
         try:
-            with open(poses[0], 'r') as poseFile:
-                resname = None
-                for line in poseFile.readlines():
-                    if 'ATOM' in line or 'HETATM' in line:
-                        resname = line.split()[3]
-                        break
             for idx, pose in enumerate(poses):
-                Popen(f'grep "ATOM" {g_receptorPath} > tempComplex.pdb', shell=True).wait()
-                Popen(f'grep "ATOM" {pose} >> tempComplex.pdb', shell=True).wait()
+                Popen(f'grep "ATOM" {g_receptorPath} > tempComplex_{idx + 1}.pdb', shell=True).wait()
+                Popen(f'grep "ATOM" {pose} >> tempComplex_{idx + 1}.pdb', shell=True).wait()
                 #  adding segid and chain X
-                nameForContact: str = f"complex_pose{idx}.pdb"
-                g_complex = open(nameForContact, 'w')
-                with open('tempComplex.pdb', 'r') as _:
-                    for r_line in _.readlines():
-                        if resname in r_line:
-                            g_complex.write(r_line[0:22] + "X" + r_line[23:74] + "X" + r_line[73:-1] + "\n")
-                        else:
-                            g_complex.write(r_line)
-                g_complex.close()
+                nameForContact: str = f"tempComplex_{idx + 1}.pdb"
                 tcl_script_path = os.path.join(self.package_dir, 'VMD', 'getContacts.tcl')
                 #  We now copy the tcl script for counting the contacts
                 Popen(f"cp {tcl_script_path} .", shell=True).wait()
                 Popen(f"sed -i 's/PLACEHOLDER_0/{nameForContact}/g' getContacts.tcl", shell=True).wait()
                 Popen(f"sed -i 's/PLACEHOLDER_1/{self.restrictions[0]}/g' getContacts.tcl", shell=True).wait()
                 Popen(f"sed -i 's/PLACEHOLDER_2/{self.restrictions[1]}/g' getContacts.tcl", shell=True).wait()
+                Popen(f"sed -i 's/PLACEHOLDER_3/contacts_{idx + 1}.int/g' getContacts.tcl", shell=True).wait()
+                # make contacts.int
                 Popen(f'vmd -dispdev text -e getContacts.tcl', shell=True, stderr=DEVNULL, stdout=DEVNULL).wait()
-                with open(f"contacts.int", 'r') as poseContacts:
+
+                output_file = f"{folder}_summary.con"
+                txt_file = f"{folder}_{idx +1}.txt"
+                with open(f"contacts_{idx + 1}.int", 'r') as poseContacts:
                     contact_content = poseContacts.read()
                     numContacts = int(contact_content.split(",")[0])
                     if numContacts > 0:
-                        Popen(f'cat contacts.int >> {folder}_{idx+1}.txt', shell=True).wait()
+                        print(f"Found {numContacts} contact(s) in {pose} folder: {folder}")  # deprotonated_arachidonic_acid_out_pose1.pdb, depro_arach_acid
+                        Popen(f'cat {txt_file} >> {output_file}', shell=True).wait()
+                        Popen(f'cat contacts_{idx + 1}.int >> {output_file}', shell=True).wait()
                     else:
-                        Popen(f'rm {folder}_{idx+1}.txt', shell=True).wait()
-            if any(os.path.exists(textFile) for textFile in os.listdir("./") if textFile.endswith("txt")):
-                Popen(f'cat *.txt > {folder}_summary.con', shell=True).wait()
-            Popen('rm tempComplex.pdb', shell=True).wait()
+                        Popen(f'rm contacts_{idx + 1}.int', shell=True).wait()
             os.chdir(self.ROOT)
         except Exception as e:
             print("Ligand ", folder, "did not produce results.", e)
@@ -120,7 +111,29 @@ class DockingRanker:
     def SortSummary(self, consider) -> None:
         for s_file in os.listdir(self.ROOT):
             if s_file == 'Summary_chart.txt':
-                Popen('sort Summary_chart.txt -k 2n > sortedSummary.txt', shell=True).wait()
+                input_file = s_file
+                output_file = "output.txt"
+                best_scores = {}
+                with open(input_file, "r") as infile:
+                    for line in infile:
+                        parts = line.strip().split("\t")
+                        if len(parts) < 2:
+                            continue
+                        path, score_str = parts[0], parts[1]
+                        try:
+                            score = float(score_str)
+                        except ValueError:
+                            continue
+                        match = re.search(r'Docking_folder/([^/]+)/', path)
+                        if match:
+                            ligand = match.group(1)
+                            if ligand not in best_scores or score < best_scores[ligand][0]:
+                                best_scores[ligand] = (score, line.strip())
+                with open(output_file, "w") as outfile:
+                    for score, line in best_scores.values():
+                        outfile.write(line + "\n")
+
+                Popen('sort output.txt -k 2n > sortedSummary.txt', shell=True).wait()
                 Popen(f'head -{consider} sortedSummary.txt > best{consider}.txt', shell=True).wait()
-                Popen(f'mv Summary_chart.txt logs', shell=True).wait()
+                Popen(f'mv Summary_chart.txt output.txt logs', shell=True).wait()
                 break

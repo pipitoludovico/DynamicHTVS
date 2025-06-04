@@ -7,10 +7,9 @@
     <list default="true" id="2e2b6fb1-aabc-4f02-b5d4-9b6692e92237" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DatabaseDocker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Dynamics/DynamicScorer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/LigandTools/Parameterizer_AMBER.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Runners/BUILD_AND_RUN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VirtualScreener.py" beforeDir="false" afterPath="$PROJECT_DIR$/VirtualScreener.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/DockingRanker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/SmilesCleaner.py" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/Docking/SmilesCleaner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DynamicHTVS_lib/VMD/getContacts.tcl" beforeDir="false" afterPath="$PROJECT_DIR$/DynamicHTVS_lib/VMD/getContacts.tcl" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -196,7 +195,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-348a24fa61fa-5312c7369657-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.23774.444" />
+        <option value="bundled-python-sdk-dfff61a61320-9cdd278e9d02-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.25410.159" />
       </set>
     </attachedChunks>
   </component>

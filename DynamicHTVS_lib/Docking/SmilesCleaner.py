@@ -14,8 +14,8 @@ class SmilesCleaner:
             self.molObjs = [Chem.MolFromSmiles(smi) for smi in self.smiles]
             for mol in self.molObjs:
                 Chem.RemoveStereochemistry(mol)
-                self.remover.StripMol(mol)
-            self.canonicalSmiles = [Chem.MolToSmiles(mol) for mol in self.molObjs]
+
+            self.canonicalSmiles = [Chem.MolToSmiles(self.remover.StripMol(mol)) for mol in self.molObjs]
 
         except Exception as e:
             print(e)

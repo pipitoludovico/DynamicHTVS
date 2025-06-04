@@ -50,7 +50,7 @@ proc contactFreq {sel1 sel2 outFile mol} {
 
 set sel1 "PLACEHOLDER_1"
 set sel2 "PLACEHOLDER_2"
-set outName contacts.int
+set outName PLACEHOLDER_3
 
 
 contactFreq $sel1 $sel2 $outName top

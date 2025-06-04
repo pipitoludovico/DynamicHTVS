@@ -210,11 +210,14 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
                         CreateLigandPsf()
                     else:
                         print('Parameterization with SilcBio and AnteChamber failed.')
+    src_dir = path.abspath(".")
+    parent_dir = path.abspath("..")
+
     if all(path.exists(file) for file in ("par_LJ.par", "new_file_char.top")):
-        for x in listdir("../"):
-            p = path.abspath(x)
-            if p != f"./{x}":
-                run(f"cp -r *.top *.par ../{x}", shell=True)
+        for x in listdir(parent_dir):
+            dest_dir = path.abspath(path.join(parent_dir, x))
+            if path.isdir(dest_dir) and dest_dir != src_dir:
+                run(f"cp -r *.top *.par \"{dest_dir}\"", shell=True)
     chdir(cwd)
 
 

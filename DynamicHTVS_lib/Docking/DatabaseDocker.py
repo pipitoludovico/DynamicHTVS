@@ -40,7 +40,8 @@ class DatabaseDocker:
                 print("Found:", self.database)
         except Exception as e:
             print(e)
-            print("Database ending in .smi not found. Please provide a database ending in .smi with 'id' and 'smiles' columns")
+            print(
+                "Database ending in .smi not found. Please provide a database ending in .smi with 'id' and 'smiles' columns")
             exit()
 
         if not os.path.exists("./equilibration"):
@@ -49,11 +50,12 @@ class DatabaseDocker:
             extToCheck = ('.prmtop' if amberCheck else '.psf')
             trjExtensionToCheck = ('.dcd', '.xtc')
             if not any(file.endswith(extToCheck) for file in os.listdir("./equilibration")):
-                exit(f"\nRequired files missing in 'equilibration'.\n\nRequired coord and top file extensions: {extToCheck}.")
+                exit(
+                    f"\nRequired files missing in 'equilibration'.\n\nRequired coord and top file extensions: {extToCheck}.")
             if not any(file.endswith(trjExtensionToCheck) for file in os.listdir("./equilibration")):
                 exit(f"\n\nMissing required trajecotry with either {trjExtensionToCheck} extension.")
 
-    def GetLastFrameReceptor(self, selection: str) -> [str, str, str]:
+    def GetLastFrameReceptor(self, selection: str) -> tuple[str | None, str | None, str | None] | None:
         """Get the last frame from your equilibration folder needs to be specifically named this way.
         The function then takes the path of the psf and the pdb that will be used for the docking and the MDs"""
         extensions = ('.parm7', '.psf', '.gro', 'prmtop')
@@ -66,7 +68,8 @@ class DatabaseDocker:
             print("No ./equilibration folder found with equilibrated last frame topology and coordinates.")
             exit()
         amberTop, charmTop, gromacsTop = ('parm7', 'prmtop'), 'psf', 'gro'
-        FF = 'AMBER' if self.topPath.endswith(amberTop) else 'CHARMM' if self.topPath.endswith(charmTop) else 'GROMACS' if self.topPath.endswith(gromacsTop) else None
+        FF = 'AMBER' if self.topPath.endswith(amberTop) else 'CHARMM' if self.topPath.endswith(
+            charmTop) else 'GROMACS' if self.topPath.endswith(gromacsTop) else None
         if not FF:
             raise FileNotFoundError("It was not possible to determine the FF style. No topology found.")
         # check if protein is not ready for docking and extract the last frame according to the FF
@@ -84,10 +87,13 @@ class DatabaseDocker:
                 # writes allAtoms.pdb
                 LastFrameWriterAMBER(topPath=self.topPath, trjPath=self.trjPath)
                 # runs cpptraj to make allAtoms.pdb
-                Popen('cpptraj -i last_frame_getter.in > ./logs/last_frame_getter.log;', shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+                Popen('cpptraj -i last_frame_getter.in > ./logs/last_frame_getter.log;', shell=True, stdout=DEVNULL,
+                      stderr=DEVNULL).wait()
                 if os.path.exists('allAtoms.pdb'):
                     # this takes allAtoms and extracts the protein for docking
-                    Popen("""awk '($1 == "ATOM" || $1 == "HETATM") && $3 !~ /[+-]/ && $4 !~ /[+-]/' withIons.pdb > forDocking.pdb""",shell=True).wait()
+                    Popen(
+                        """awk '($1 == "ATOM" || $1 == "HETATM") && $3 !~ /[+-]/ && $4 !~ /[+-]/ && $4 != "WAT"' allAtoms.pdb > forDocking.pdb""",
+                        shell=True).wait()
                 else:
                     print("could not run cpptraj to extract the last frame!")
                     exit()
@@ -97,11 +103,13 @@ class DatabaseDocker:
 
             # convert to pdbqt with obabel
             print("Converting the receptor with OpenBabel for docking...")
-            Popen("obabel -i pdb forDocking.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
+            Popen("obabel -i pdb forDocking.pdb -o pdbqt -O protein.pdbqt -xr", stdout=DEVNULL, stderr=DEVNULL,
+                  shell=True).wait()
             print("\n...completed.")
             # remove torsions due obabel faliures
             print("\nRemoving torsions and branches info from the pdbqt -> making receptor.pdbqt")
-            Popen('grep -Ev "ENDBRANCH|ROOT|ENBRANCH|REMARK|BRANCH|TORSDOF" protein.pdbqt > receptor.pdbqt', shell=True).wait()
+            Popen('grep -Ev "ENDBRANCH|ROOT|ENBRANCH|REMARK|BRANCH|TORSDOF" protein.pdbqt > receptor.pdbqt',
+                  shell=True).wait()
             # move the receptor.pdbqt to receptor folder as well as system
             print('Cleaning folders...')
             if FF == 'CHARMM':
@@ -128,9 +136,9 @@ class DatabaseDocker:
                     coords_str = line.strip('\n').split(" ")
                     x_coor, y_coor, z_coor = coords_str[1], coords_str[2], coords_str[3]
                     break
-        finally:
             vmdin.stdout.close()
-            vmdin.stderr.close()
+        except IOError:
+            print("Could not read the coordinates from the forDocking.pdb file.")
         # clean ROOT
         Popen('mv *.tcl logs; rm protein.pdbqt protein_only.*', stderr=DEVNULL, stdout=DEVNULL, shell=True).wait()
         return x_coor, y_coor, z_coor
@@ -192,8 +200,11 @@ class DatabaseDocker:
         Individual folders will be created for each ligand."""
         os.chdir("./Docking_folder/" + d_folder)
         ligand_pdbqt = d_folder + ".pdbqt"
-        Popen(f'obabel -i pdb {d_folder}.pdb -o pdbqt -O {ligand_pdbqt} -xn -xh --partialcharge mmff94', stdout=DEVNULL, stderr=DEVNULL, shell=True).wait()
-        Popen(f"qvina2 --center_x {x_coor} --center_y {y_coor} --center_z {z_coor} --size_x {self.boxsize} --size_y {self.boxsize} --size_z {self.boxsize} --receptor {self.ROOT}/receptor/receptor.pdbqt --ligand {ligand_pdbqt} --cpu {self.cpus - 2} --exhaustiveness 8 --num_modes {self.poses}  --out {d_folder}_out.pdbqt", stdout=DEVNULL, stderr=PIPE, shell=True).wait()
+        Popen(f'obabel -i pdb {d_folder}.pdb -o pdbqt -O {ligand_pdbqt} -xn -xh --partialcharge mmff94', stdout=DEVNULL,
+              stderr=DEVNULL, shell=True).wait()
+        Popen(
+            f"qvina2 --center_x {x_coor} --center_y {y_coor} --center_z {z_coor} --size_x {self.boxsize} --size_y {self.boxsize} --size_z {self.boxsize} --receptor {self.ROOT}/receptor/receptor.pdbqt --ligand {ligand_pdbqt} --cpu {self.cpus - 2} --exhaustiveness 32 --num_modes {self.poses}  --out {d_folder}_out.pdbqt",
+            stdout=DEVNULL, stderr=PIPE, shell=True).wait()
         os.chdir(self.ROOT)
 
     def DockMols(self, selection):
