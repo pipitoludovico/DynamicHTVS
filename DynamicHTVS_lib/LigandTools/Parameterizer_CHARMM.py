@@ -140,12 +140,18 @@ def WriteGaussian(pdbFile, charge) -> None:
 
 def RunSilcBio(mol2, strFile) -> bool:
     try:
-        result = run(f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  {mol2} > {strFile}", shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
+        result = run(
+            f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  {mol2} > {strFile}",
+            shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
         if "skipped" in result.stderr:
-            result_second_attempt = run(f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  --bond-order {mol2} > {strFile}", shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
+            result_second_attempt = run(
+                f"/home/scratch/software/silcsbio.2022.1/cgenff/cgenff --all-parameters --force-exhaustive  --bond-order {mol2} > {strFile}",
+                shell=True, stdout=DEVNULL, stderr=PIPE, text=True)
             if "skipped" in result_second_attempt.stderr:
                 print("Silcsbio failed.")
                 return False
+            else:
+                return True
         else:
             return True
     except FileNotFoundError:
@@ -153,7 +159,7 @@ def RunSilcBio(mol2, strFile) -> bool:
         return False
 
 
-def RenumbererWrapper(initialPDBinPostDockPoses, folder)->None:
+def RenumbererWrapper(initialPDBinPostDockPoses, folder) -> None:
     chdir(folder)
     pdb_rename(initialPDBinPostDockPoses)  # renum_whatever.pdb
     chdir(cwd)
@@ -186,7 +192,8 @@ def Parameterize(initialPDBinPOSTdocks, folder) -> None:
             mol_for_charge = Chem.MolFromMol2File(f"{mol2}")
             charge = Chem.GetFormalCharge(mol_for_charge)
         except Exception as e:
-            print("Molecule ", molID, " failed. Turnin off sanitization. Check the results are they might be wrong or unphysical!")
+            print("Molecule ", molID,
+                  " failed. Turnin off sanitization. Check the results are they might be wrong or unphysical!")
             print(repr(e))
             mol_for_charge = Chem.MolFromPDBFile(f"{initialPDBinPOSTdocks}", sanitize=False)
             charge = Chem.GetFormalCharge(mol_for_charge)
